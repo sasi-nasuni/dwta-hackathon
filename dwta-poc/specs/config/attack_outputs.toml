@@ -1,0 +1,8 @@
+# Files the encryption run itself creates; they collapse into one review item (spec §5.10.2).
+version = "1.0"
+extensions = [".dwtalocked", ".locked", ".encrypted", ".crypt"]
+note_names = ["README*.txt", "*DECRYPT*", "*RECOVER*", "*RANSOM*"]
+
+[replaced_original]
+enabled = true
+within_seconds = 60

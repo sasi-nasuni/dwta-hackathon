@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dwta.local/schemas/incident.v1",
+  "title": "dwta.incident/v1: product incident + admin restore time (spec \u00a76.5)",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "dwta.incident/v1"
+    },
+    "incident_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source": {
+      "enum": [
+        "scenario",
+        "cli",
+        "product"
+      ]
+    },
+    "kind": {
+      "type": "string"
+    },
+    "detected_sim_ts": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d(\\.\\d+)?Z$"
+    },
+    "user": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "client_ip": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "client_name": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "volumes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "restore_time_sim_ts": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d(\\.\\d+)?Z$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "description": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "schema",
+    "incident_id",
+    "detected_sim_ts",
+    "volumes"
+  ],
+  "additionalProperties": true
+}

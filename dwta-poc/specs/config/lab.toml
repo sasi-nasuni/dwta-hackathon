@@ -1,0 +1,58 @@
+# Lab topology (spec §2.3, §5.2.3). Fixed in v1; BL-01 makes this fully parameterized in v2.
+version = "1.0"
+
+[network]
+subnet_pool = ["10.250.1.0/24", "10.250.2.0/24", "10.250.3.0/24", "10.250.4.0/24", "10.250.5.0/24",
+               "10.250.6.0/24", "10.250.7.0/24", "10.250.8.0/24", "10.250.9.0/24", "10.250.10.0/24"]
+smb_port_range = [14450, 14499]
+ledger_port_range = [15432, 15499]
+
+[hosts]             # host octet per service container
+samba = 10
+ledger = 20
+collector = 30
+classifier = 31
+matcher = 32
+incident = 33
+
+[shares.finance]
+kind = "document"
+write_groups = ["finance-rw"]
+
+[shares.software]
+kind = "software"
+write_groups = ["software-rw"]
+
+[identities]        # SMB account -> unix groups
+admin = ["finance-rw", "software-rw"]
+jdoe = ["finance-rw"]
+asmith = ["finance-rw", "software-rw"]
+svc-backup = ["finance-rw"]
+
+[actors.client-admin]
+octet = 5
+netbios = "WS-ADMIN01"
+identity = "admin"
+role = "admin"
+credentials = ["admin"]
+
+[actors.client-jdoe]
+octet = 21
+netbios = "WS-JDOE01"
+identity = "jdoe"
+role = "legit"
+credentials = ["jdoe"]
+
+[actors.client-asmith]
+octet = 22
+netbios = "WS-ASMITH01"
+identity = "asmith"
+role = "legit"
+credentials = ["asmith"]
+
+[actors.client-attack]
+octet = 66
+netbios = "SRV-BKP01"
+identity = "svc-backup"
+role = "attacker"
+credentials = ["svc-backup", "jdoe"]   # jdoe = stolen credentials for the later compromised-account scenario

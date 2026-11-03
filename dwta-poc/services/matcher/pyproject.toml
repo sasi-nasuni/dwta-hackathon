@@ -1,0 +1,17 @@
+[project]
+name = "dwta-matcher"
+version = "1.0.0"
+description = "B8 feed matcher: feed inbox -> hash lookup in the ledger (no file reads)"
+requires-python = ">=3.12"
+dependencies = ["dwta-core", "dwta-ledger"]
+
+[project.scripts]
+dwta-matcher = "dwta_matcher.main:main"
+
+[build-system]
+requires = ["uv_build>=0.9,<0.10"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+dwta-core = { workspace = true }
+dwta-ledger = { workspace = true }

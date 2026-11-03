@@ -1,0 +1,80 @@
+# Rules typer (spec §5.5.3): magic-byte signatures, evaluated in order; first match wins.
+# `check` names a structural refinement done in code (pe_header, zip, ole2). Everything else is data.
+version = "1.0"
+text_sample_bytes = 4096
+script_markers = ["#!", "@echo off", "<script", "powershell", "' vba", "option explicit", "wscript.", "<?php"]
+eicar = "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*"
+
+[[signature]]
+label = "pe"
+type_class = "pe_binary"
+hex = "4d5a"
+check = "pe_header"
+
+[[signature]]
+label = "elf"
+type_class = "elf_binary"
+hex = "7f454c46"
+
+[[signature]]
+label = "macho64"
+type_class = "macho_binary"
+hex = "cffaedfe"
+
+[[signature]]
+label = "macho32"
+type_class = "macho_binary"
+hex = "cefaedfe"
+
+[[signature]]
+label = "lnk"
+type_class = "lnk_shortcut"
+hex = "4c0000000114020000000000c000000000000046"
+
+[[signature]]
+label = "pdf"
+type_class = "pdf"
+hex = "25504446"
+search_bytes = 1024          # PDF readers accept junk before %PDF
+
+[[signature]]
+label = "ole2"
+type_class = "office_doc"
+hex = "d0cf11e0a1b11ae1"
+check = "ole2"
+
+[[signature]]
+label = "zip"
+type_class = "archive"
+hex = "504b0304"
+check = "zip"
+
+[[signature]]
+label = "png"
+type_class = "image"
+hex = "89504e470d0a1a0a"
+
+[[signature]]
+label = "jpeg"
+type_class = "image"
+hex = "ffd8ff"
+
+[[signature]]
+label = "gif"
+type_class = "image"
+hex = "47494638"
+
+[[signature]]
+label = "gzip"
+type_class = "archive"
+hex = "1f8b08"
+
+[[signature]]
+label = "7z"
+type_class = "archive"
+hex = "377abcaf271c"
+
+[[signature]]
+label = "rar"
+type_class = "archive"
+hex = "526172211a07"

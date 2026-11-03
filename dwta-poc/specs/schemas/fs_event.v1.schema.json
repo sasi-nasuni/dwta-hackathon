@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dwta.local/schemas/fs_event.v1",
+  "title": "dwta.fs_event/v1: collector output (spec \u00a76.1)",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "dwta.fs_event/v1"
+    },
+    "event_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "source": {
+      "enum": [
+        "audit",
+        "watcher"
+      ]
+    },
+    "op": {
+      "enum": [
+        "write_close",
+        "rename",
+        "delete",
+        "mkdir"
+      ]
+    },
+    "ts": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d(\\.\\d+)?Z$"
+    },
+    "sim_ts": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d(\\.\\d+)?Z$"
+    },
+    "volume": {
+      "type": "string"
+    },
+    "path": {
+      "type": "string",
+      "pattern": "^/"
+    },
+    "prev_path": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "via_rename": {
+      "type": "boolean"
+    },
+    "user": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "client_ip": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "client_name": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "client_origin": {
+      "enum": [
+        "lab",
+        "host",
+        null
+      ]
+    },
+    "size": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "raw_ref": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "schema",
+    "event_id",
+    "source",
+    "op",
+    "ts",
+    "sim_ts",
+    "volume",
+    "path",
+    "prev_path",
+    "via_rename",
+    "user",
+    "client_ip",
+    "client_name",
+    "client_origin",
+    "size",
+    "raw_ref"
+  ],
+  "additionalProperties": false
+}

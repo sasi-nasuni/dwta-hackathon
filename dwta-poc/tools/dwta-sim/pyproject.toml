@@ -1,0 +1,17 @@
+[project]
+name = "dwta-sim"
+version = "1.0.0"
+description = "Safe, scenario-driven attack simulator (host CLI, stdlib only)"
+requires-python = ">=3.12"
+dependencies = ["dwta-core"]
+
+[project.scripts]
+dwta-sim = "dwta_sim.cli:main"
+dwta-lab = "dwta_sim.lab_cli:main"
+
+[build-system]
+requires = ["uv_build>=0.9,<0.10"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+dwta-core = { workspace = true }

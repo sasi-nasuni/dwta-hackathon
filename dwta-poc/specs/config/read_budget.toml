@@ -1,0 +1,7 @@
+# Read budget (spec §5.11, RBQ-03). One full read per version up to the hash cap; head + tail above it.
+version = "1.0"
+head_bytes = 65536
+tail_bytes = 65557
+small_file_full_read_bytes = 131072
+hash_size_cap_bytes = 67108864
+mode = "immediate"

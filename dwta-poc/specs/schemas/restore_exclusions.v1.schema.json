@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dwta.local/schemas/restore_exclusions.v1",
+  "title": "dwta.restore_exclusions/v1: restore without these files (spec \u00a76.7)",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "dwta.restore_exclusions/v1"
+    },
+    "incident_id": {
+      "type": "string"
+    },
+    "restore_time": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d(\\.\\d+)?Z$"
+    },
+    "finalized_by": {
+      "type": "string"
+    },
+    "finalized_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d(\\.\\d+)?Z$"
+    },
+    "mode": {
+      "enum": [
+        "rules",
+        "rules_ai"
+      ]
+    },
+    "remove": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "item_key",
+          "item_kind",
+          "action"
+        ],
+        "properties": {
+          "action": {
+            "const": "quarantine"
+          }
+        }
+      }
+    },
+    "kept": {
+      "type": "array"
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "listed",
+        "remove",
+        "keep"
+      ]
+    }
+  },
+  "required": [
+    "schema",
+    "incident_id",
+    "restore_time",
+    "finalized_by",
+    "finalized_at",
+    "mode",
+    "remove",
+    "kept",
+    "summary"
+  ],
+  "additionalProperties": true
+}

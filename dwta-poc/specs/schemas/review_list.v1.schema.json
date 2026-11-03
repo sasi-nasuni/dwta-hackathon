@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dwta.local/schemas/review_list.v1",
+  "title": "dwta.review_list/v1: pre-restore review (spec \u00a76.6)",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "dwta.review_list/v1"
+    },
+    "incident_id": {
+      "type": "string"
+    },
+    "window": {
+      "type": "object",
+      "required": [
+        "from",
+        "to"
+      ],
+      "properties": {
+        "from": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d(\\.\\d+)?Z$"
+        },
+        "to": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d(\\.\\d+)?Z$"
+        }
+      }
+    },
+    "config": {
+      "type": "object",
+      "required": [
+        "version",
+        "ranking_sha256"
+      ]
+    },
+    "incomplete": {
+      "type": "boolean"
+    },
+    "seen_but_gone": {
+      "type": "integer"
+    },
+    "modes": {
+      "type": "object",
+      "required": [
+        "rules",
+        "rules_ai"
+      ],
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "rank",
+            "item_key",
+            "item_kind",
+            "score",
+            "suspicion_level",
+            "decision",
+            "reasons"
+          ],
+          "properties": {
+            "item_kind": {
+              "enum": [
+                "file",
+                "attack_outputs_group"
+              ]
+            },
+            "suspicion_level": {
+              "enum": [
+                "high",
+                "medium",
+                "low"
+              ]
+            },
+            "decision": {
+              "enum": [
+                "pending",
+                "remove",
+                "keep"
+              ]
+            },
+            "reasons": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "signal",
+                  "weight",
+                  "evidence"
+                ]
+              }
+            },
+            "av": {
+              "type": "object",
+              "required": [
+                "verdict",
+                "engine"
+              ],
+              "properties": {
+                "verdict": {
+                  "enum": [
+                    "detected",
+                    "clean",
+                    "not_scanned",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "if": {
+            "properties": {
+              "item_kind": {
+                "const": "file"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "av"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "schema",
+    "incident_id",
+    "window",
+    "config",
+    "incomplete",
+    "modes"
+  ],
+  "additionalProperties": true
+}

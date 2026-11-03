@@ -1,0 +1,16 @@
+[project]
+name = "dwta-ledger"
+version = "1.0.0"
+description = "Ledger access (Postgres 16): migrations, roles, repositories"
+requires-python = ">=3.12"
+dependencies = ["dwta-core", "psycopg[binary]>=3.2"]
+
+[project.scripts]
+dwta-ledger = "dwta_ledger.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.9,<0.10"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+dwta-core = { workspace = true }

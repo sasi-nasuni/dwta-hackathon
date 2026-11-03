@@ -1,0 +1,16 @@
+# Python / tooling
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Lab runtime state: shares, logs, journals, ledger exports, generated secrets (.env)
+dwta-poc/lab/*
+!dwta-poc/lab/README.md
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/

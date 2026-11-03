@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dwell-Window Threat Assurance — POC Implementation Plan (Draft v0.2, hackathon edition)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #ffffff; --ink: #17202b; --muted: #56606c; --rule: #d6dce3;
+  --rule-strong: #9aa4b0; --accent: #2563a8; --warn: #c27c0e; --tint: #eaf1fa; --code: #f3f5f8;
+  color-scheme: light;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #12161c; --ink: #e6eaf0; --muted: #a3adba; --rule: #2e3640;
+    --rule-strong: #5f6b78; --accent: #6fa3e0; --warn: #e0a43a; --tint: rgba(111,163,224,0.14); --code: #1b2129;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #12161c; --ink: #e6eaf0; --muted: #a3adba; --rule: #2e3640;
+  --rule-strong: #5f6b78; --accent: #6fa3e0; --warn: #e0a43a; --tint: rgba(111,163,224,0.14); --code: #1b2129;
+  color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: inherit; }
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+body {
+  margin: 0; background: var(--paper); color: var(--ink);
+  font-family: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, Helvetica, Arial, sans-serif;
+  font-size: 16px; line-height: 1.6;
+}
+main { max-width: 46rem; margin: 0 auto; padding: 3rem 1.25rem 5rem; }
+h1 { font-size: 2rem; line-height: 1.2; font-weight: 600; margin: 0 0 0.4rem; letter-spacing: -0.01em; }
+.byline { color: var(--muted); margin: 0 0 2rem; }
+h2 {
+  font-size: 1.35rem; font-weight: 600; margin: 3rem 0 0.75rem; padding-top: 1.25rem;
+  border-top: 1px solid var(--rule);
+}
+p, li { max-width: 72ch; }
+strong { font-weight: 600; }
+a { color: var(--accent); }
+nav.toc { border-left: 3px solid var(--accent); padding: 0.25rem 0 0.25rem 1rem; margin: 0 0 1rem; }
+nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; column-gap: 2rem; font-size: 0.95rem; }
+nav.toc a { color: var(--ink); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { color: var(--accent); text-decoration: underline; }
+code {
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace; font-size: 0.88em;
+  background: var(--code); padding: 0.1em 0.35em; border-radius: 4px;
+}
+pre { background: var(--code); border-radius: 8px; padding: 1rem; overflow-x: auto; line-height: 1.45; }
+pre code { background: none; padding: 0; font-size: 0.85rem; }
+.scroll { overflow-x: auto; margin: 1rem 0; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; vertical-align: top; padding: 0.55rem 0.7rem; border-bottom: 1px solid var(--rule); }
+th { font-weight: 600; border-bottom: 2px solid var(--rule-strong); }
+ol.steps { padding-left: 1.6rem; }
+ol.steps > li { margin: 0 0 1.1rem; padding-left: 0.4rem; }
+ol.steps > li.ai { background: var(--tint); border-radius: 6px; padding: 0.5rem 0.75rem; }
+ol.steps ul { margin: 0.3rem 0 0; padding-left: 1.1rem; }
+.gate {
+  display: inline-block; margin-left: 0.4rem; padding: 0 0.5rem; border-radius: 4px;
+  border: 1px solid var(--rule-strong); font-weight: 600; font-size: 0.85rem;
+}
+ul.tasks { list-style: none; padding-left: 0; }
+ul.tasks li { position: relative; padding-left: 1.8rem; margin-bottom: 0.5rem; }
+ul.tasks li::before {
+  content: ""; position: absolute; left: 0; top: 0.3rem; width: 1rem; height: 1rem;
+  border: 1.5px solid var(--rule-strong); border-radius: 3px;
+}
+figure { margin: 1.5rem 0; }
+figure .wrap { overflow-x: auto; }
+svg.diagram { display: block; width: 100%; min-width: 560px; height: auto; font-family: inherit; }
+svg .ink { fill: var(--ink); }
+svg .quiet { fill: var(--muted); }
+svg .box { fill: none; stroke: var(--rule-strong); stroke-width: 1.25; }
+svg .box.ai { fill: var(--tint); stroke: var(--accent); stroke-width: 2; }
+svg .box.optional { stroke-dasharray: 4 4; }
+svg .lab { fill: none; stroke: var(--rule-strong); stroke-width: 1; stroke-dasharray: 4 4; }
+svg .edge { fill: none; stroke: var(--rule-strong); stroke-width: 1.25; }
+svg .head { fill: var(--rule-strong); }
+svg .grid { stroke: var(--rule); stroke-width: 1; }
+svg .bar { fill: var(--code); stroke: var(--rule-strong); stroke-width: 1.25; }
+svg .bar.ai { fill: var(--tint); stroke: var(--accent); }
+svg .gateline { stroke: var(--rule-strong); stroke-width: 1.25; stroke-dasharray: 4 4; }
+svg .gateline.go { stroke: var(--warn); stroke-width: 1.5; }
+svg .diamond { fill: var(--rule-strong); }
+svg .diamond.go { fill: var(--warn); }
+.gate.go { border-color: var(--warn); }
+li.ai-item::marker { color: var(--accent); }
+figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 0.4rem; }
+@media print { h2 { break-after: avoid; } figure, table { break-inside: avoid; } }
+</style>
+</head>
+<body>
+<main>
+<h1>Dwell-Window Threat Assurance — POC Implementation Plan (Draft v0.2, hackathon edition)</h1>
+<p class="byline">Draft for DEV team review</p>
+
+<nav class="toc" aria-label="Contents"><ol><li><a href="#purpose-and-status">Purpose and status</a></li><li><a href="#problem-and-poc-goal">Problem and POC goal</a></li><li><a href="#why-today-s-antivirus-doesn-t-close-this-gap">Why today&#x27;s antivirus doesn&#x27;t close this gap</a></li><li><a href="#guiding-principles">Guiding principles</a></li><li><a href="#architecture-overview">Architecture overview</a></li><li><a href="#tech-stack-and-repository-layout">Tech stack and repository layout</a></li><li><a href="#step-by-step-implementation-the-48-hour-build">Step-by-step implementation: the 48-hour build</a></li><li><a href="#how-we-build-spec-driven-with-claude-opus-5-5">How we build: spec-driven with Claude Opus 5.5</a></li><li><a href="#team-and-roles">Team and roles</a></li><li><a href="#evaluation-and-definition-of-done">Evaluation and definition of done</a></li><li><a href="#risks-and-mitigations">Risks and mitigations</a></li><li><a href="#open-decisions-for-the-dev-team">Open decisions for the DEV team</a></li><li><a href="#sources">Sources</a></li></ol></nav>
+<h2 id="purpose-and-status">Purpose and status</h2>
+<p>We will build a standalone Dwell-Window Threat Assurance (DwTA) proof of concept as a hackathon project: a rules-only core that always works, plus AI layers behind the same interfaces. This draft walks the DEV team through how, step by step, so we can challenge and refine it before the build starts.</p>
+<ul>
+<li><strong>Audience:</strong> DEV, security, QA and PM reviewers.</li>
+<li><strong>Status:</strong> draft v0.2, rescoped to fit the hackathon. Comment on any line; the decisions still open are listed near the end.</li>
+<li><strong>Out of scope:</strong> any change to production Edge, NMC or Ransomware Protection code. The POC runs in its own lab.</li>
+</ul>
+<h2 id="problem-and-poc-goal">Problem and POC goal</h2>
+<p>Today a file an attacker plants on a share and leaves alone is never flagged, and Targeted Restore leaves it in place after recovery. Detection is behavior-based, and antivirus checks a file once at write time with that day's signatures.</p>
+<p>The POC proves we can close that gap cheaply: recognize risky files by content at write time, remember them in a small ledger, re-check them by hash lookup when threat intelligence catches up, and list them next to the restore plan when an incident fires.</p>
+<p><strong>The 5-minute demo story</strong></p>
+<ol>
+<li><strong>Simulated Day 1:</strong> an attacker identity copies <code>Q3-Report.pdf</code> (really a harmless test executable) to the Finance share. Today's antivirus calls it clean because nothing knows it yet. The POC classifies it by content, flags the extension mismatch, hashes it and alerts.</li>
+<li><strong>Simulated Day 5:</strong> a threat feed publishes that file's hash. The matcher finds it in the ledger with a lookup, not a rescan, and raises a critical alert.</li>
+<li><strong>Simulated Day 7:</strong> an encryption run triggers an incident. The UI shows the restore plan and, beside it, a ranked quarantine plan of what the attacker left in the dwell window.</li>
+<li><strong>Toggle:</strong> the same scenario shown as "rules only" and "rules + AI", so the audience sees exactly what AI adds.</li>
+</ol>
+<p>The lab runs on a simulated clock. Events carry backdated timestamps, so the whole week-long attack replays in a few minutes on stage.</p>
+<h2 id="why-today-s-antivirus-doesn-t-close-this-gap">Why today's antivirus doesn't close this gap</h2>
+<p>Nasuni's Antivirus Protection is a sound write-time gate, but it judges each file once, against the signatures known at that moment. DwTA adds the second look that a dwell-window attack exploits, so it complements the antivirus feature rather than replacing it.</p>
+<p><strong>What the product does today, per Nasuni's documentation</strong></p>
+<ul>
+<li>Antivirus Protection uses the open-source ClamAV engine and scans every new or modified file before it is protected in cloud storage (<a href="https://docs.nasuni.com/docs/nasuni-antivirus-protection">Antivirus Protection</a>).</li>
+<li>Scans run in batches at snapshot time, or on file close when "Check files immediately" is enabled on an SMB volume. Definitions sync within four hours of a ClamAV update (<a href="https://docs.nasuni.com/docs/nmc-task-overview">NMC Task Overview</a>).</li>
+<li>It does not detect malware in encrypted or password-protected files, files over 25 MB, or large container files (<a href="https://docs.nasuni.com/docs/nmc-cyber-resilience-page">NMC Cyber Resilience page</a>).</li>
+<li>An infected file stays in the Edge cache, unprotected, until an administrator ignores or deletes it (<a href="https://docs.nasuni.com/docs/nasuni-antivirus-protection">Antivirus Protection</a>).</li>
+<li>Ransomware Protection flags known ransomware file extensions and ransom notes as they appear, and notifies administrators (<a href="https://docs.nasuni.com/docs/nasuni-ransomware-protection">Nasuni Ransomware Protection</a>).</li>
+</ul>
+<p>The docs describe scanning new or modified files only; we found no retroactive rescan of unchanged files. They also note that a full scan with a third-party scanner would pull all data into the Edge cache, which is why DwTA re-checks by hash lookup instead. The team should confirm both points with the Edge antivirus owners.</p>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Antivirus Protection today</th>
+<th>Ransomware Protection today</th>
+<th>What DwTA adds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>When is a file checked?</td>
+<td>Once, when new or modified</td>
+<td>When files are created or renamed</td>
+<td>At write, then again by hash lookup each time new threat intelligence arrives</td>
+</tr>
+<tr>
+<td>Checked against what?</td>
+<td>ClamAV signatures known at scan time</td>
+<td>Known ransomware extensions and ransom notes</td>
+<td>Content type plus context: who wrote it, from which IP, onto which share</td>
+</tr>
+<tr>
+<td>A new payload with no signature yet</td>
+<td>Passes as clean and goes to cloud storage</td>
+<td>Not in scope</td>
+<td>Recorded in the ledger; flagged if it is executable content on a document share</td>
+</tr>
+<tr>
+<td>A binary renamed <code>.pdf</code></td>
+<td>Passes unless a signature matches</td>
+<td>Not in scope</td>
+<td>Flagged by the content-type mismatch</td>
+</tr>
+<tr>
+<td>Files antivirus can't inspect (encrypted, over 25 MB)</td>
+<td>Not checked for malware</td>
+<td>Not in scope</td>
+<td>Hash and writer still recorded, so a later feed match still lands</td>
+</tr>
+<tr>
+<td>After an incident</td>
+<td>No link to the attack's dwell window</td>
+<td>Alerts; Targeted Restore recovers encrypted files but leaves planted files in place</td>
+<td>A ranked quarantine list of what the attacker planted, beside the restore plan</td>
+</tr>
+<tr>
+<td>Remediation</td>
+<td>Ignore or delete</td>
+<td>Not applicable</td>
+<td>Proposed quarantine: move to a locked folder after admin approval, never delete</td>
+</tr>
+</tbody>
+</table></div>
+<p>In the demo, a ClamAV container scans the planted file on simulated Day 1 and reports it clean. That is the honest baseline: the gap is about timing and context, not a weak engine.</p>
+<h2 id="guiding-principles">Guiding principles</h2>
+<p>Six rules shape every design choice below; if a step breaks one, we change the step.</p>
+<ol>
+<li><strong>Isolated.</strong> The POC only consumes an SMB share in its own Docker lab. Its one contract with the product is the event and ledger schema, so it can later feed or be replaced by Edge code without a rewrite.</li>
+<li><strong>Rules first, AI optional.</strong> The deterministic path (magic bytes, SHA-256, lookup, ranking rules) is the source of truth and always works on its own. AI adds signals and explanations behind the same interfaces, never replaces the core.</li>
+<li><strong>Never in the write path.</strong> Classification runs asynchronously after file close. Nothing blocks or slows a user's write.</li>
+<li><strong>Spec-driven.</strong> Specs and contract tests come before code. Claude Opus 5.5 generates code against them; humans own the specs and review every merge.</li>
+<li><strong>Safe by construction.</strong> No real malware, ever. Only EICAR, benign test binaries and a harmless macro document. The threat feed is fabricated, and the LLM can read evidence but never act.</li>
+<li><strong>Cut, don't stretch.</strong> Anything not working at a gate is cut, not extended. The rules-only path is protected first, and stretch items start only after the full demo works.</li>
+</ol>
+<h2 id="architecture-overview">Architecture overview</h2>
+<p>Every file written to the lab share flows through one asynchronous pipeline into a small ledger; AI plugs in behind two interfaces, the classifier and the narrator.</p>
+<figure><div class="wrap"><svg class="diagram" viewBox="0 0 760 712" role="img" aria-label="One async pipeline; AI plugs in behind two interfaces"><defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="head"/></marker></defs><text x="24" y="30" class="ink" font-size="15" font-weight="600" text-anchor="start">One async pipeline; AI plugs in behind two interfaces</text><rect x="16" y="48" width="728" height="608" rx="8" class="lab"/><text x="32" y="72" class="quiet" font-size="13" font-weight="600" text-anchor="start">Isolated Docker Compose lab, separate from production</text><path d="M240 132H276" class="edge" marker-end="url(#arr)"/><path d="M520 132H484" class="edge" marker-end="url(#arr)"/><path d="M380 168V200" class="edge" marker-end="url(#arr)"/><path d="M380 272V304" class="edge" marker-end="url(#arr)"/><path d="M380 392V424" class="edge" marker-end="url(#arr)"/><path d="M136 376V424" class="edge" marker-end="url(#arr)"/><path d="M624 376V424" class="edge" marker-end="url(#arr)"/><path d="M240 460H276" class="edge" marker-end="url(#arr)"/><path d="M484 460H520" class="edge" marker-end="url(#arr)"/><path d="M624 512V552" class="edge" marker-end="url(#arr)"/><path d="M520 596H484" class="edge" marker-end="url(#arr)"/><path d="M380 496V552" class="edge" marker-end="url(#arr)"/><path d="M136 496V596H276" class="edge" marker-end="url(#arr)"/><text x="388" y="190" class="quiet" font-size="11.5" font-weight="400" text-anchor="start">audit events</text><text x="388" y="292" class="quiet" font-size="11.5" font-weight="400" text-anchor="start">async, after file close</text><text x="206" y="588" class="quiet" font-size="11.5" font-weight="400" text-anchor="middle">alerts</text><rect x="32" y="96" width="208" height="72" rx="8" class="box"/><text x="136" y="120" class="ink" font-size="13" font-weight="600" text-anchor="middle">SMB client</text><text x="136" y="136" class="quiet" font-size="11.5" font-weight="400" text-anchor="middle">Windows VM or smbclient</text><text x="136" y="152" class="quiet" font-size="11.5" font-weight="400" text-anchor="middle">writes test files</text><rect x="276" y="96" width="208" height="72" rx="8" class="box"/><text x="380" y="120" class="ink" font-size="13" font-weight="600" text-anchor="middle">Samba share</text><text x="380" y="136" class="quiet" font-size="11.5" font-weight="400" text-anchor="middle">vfs_full_audit logs</text><text x="380" y="152" class="quiet" font-size="11.5" font-weight="400" text-anchor="middle">user, IP, path, operation</text><rect x="520" y="96" width="208" height="72" rx="8" class="box"/><text x="624" y="120" class="ink" font-size="13" font-weight="600" text-anchor="middle">Attack simulator</text><text x="624" y="136" class="quiet" font-size="11.5" font-weight="400" text-anchor="middle">UNTY-89818 or script</text><text x="624" y="152" class="quiet" font-size="11.5" font-weight="400" text-anchor="middle">encrypts test files</text><rect x="276" y="200" width="208" height="72" rx="8" class="box"/><text x="380" y="224" class="ink" font-size="13" font-weight="600" text-anchor="middle">Collector</text><text x="380" y="240" class="quiet" font-size="11.5" font-weight="400" text-anchor="middle">Audit tailer or file watcher</text><text x="380" y="256" class="quiet" font-size="11.5" font-weight="400" text-anchor="middle">emits JSON events</text><rect x="32" y="304" width="208" height="72" rx="8" class="box"/><text x="136" y="328" class="ink" font-size="13" font-weight="600" text-anchor="middle">Threat feed</text><text x="136" y="344" class="quiet" font-size="11.5" font-weight="400" text-anchor="middle">Fabricated, MalwareBazaar</text><text x="136" y="360" class="quiet" font-size="11.5" font-weight="400" text-anchor="middle">export format</text><rect x="276" y="304" width="208" height="88" rx="8" class="box ai"/><text x="380" y="328" class="ink" font-size="13" font-weight="600" text-anchor="middle">Classifier interface</text><text x="380" y="344" class="ink" font-size="11.5" font-weight="400" text-anchor="middle">Rules: magic bytes, oletools</text><text x="380" y="360" class="ink" font-size="11.5" font-weight="400" text-anchor="middle">YARA-X, SHA-256, TLSH</text><text x="380" y="376" class="ink" font-size="11.5" font-weight="400" text-anchor="middle">AI: Magika; EMBER stretch</text><rect x="520" y="304" width="208" height="72" rx="8" class="box"/><text x="624" y="328" class="ink" font-size="13" font-weight="600" text-anchor="middle">Simulated incident</text><text x="624" y="344" class="quiet" font-size="11.5" font-weight="400" text-anchor="middle">Start time, user, IP</text><text x="624" y="360" class="quiet" font-size="11.5" font-weight="400" text-anchor="middle">Simulated Day 7 run</text><rect x="32" y="424" width="208" height="72" rx="8" class="box"/><text x="136" y="448" class="ink" font-size="13" font-weight="600" text-anchor="middle">Feed matcher</text><text x="136" y="464" class="quiet" font-size="11.5" font-weight="400" text-anchor="middle">Hash lookup, no rescan</text><text x="136" y="480" class="quiet" font-size="11.5" font-weight="400" text-anchor="middle">Simulated Day 5 alert</text><rect x="276" y="424" width="208" height="72" rx="8" class="box"/><text x="380" y="448" class="ink" font-size="13" font-weight="600" text-anchor="middle">Artifact ledger</text><text x="380" y="464" class="quiet" font-size="11.5" font-weight="400" text-anchor="middle">SQLite: type, hash, user, IP</text><text x="380" y="480" class="quiet" font-size="11.5" font-weight="400" text-anchor="middle">Schema is the contract</text><rect x="520" y="424" width="208" height="88" rx="8" class="box"/><text x="624" y="448" class="ink" font-size="13" font-weight="600" text-anchor="middle">Incident engine</text><text x="624" y="464" class="quiet" font-size="11.5" font-weight="400" text-anchor="middle">30-day dwell-window query</text><text x="624" y="480" class="quiet" font-size="11.5" font-weight="400" text-anchor="middle">Rank: feed match, identity,</text><text x="624" y="496" class="quiet" font-size="11.5" font-weight="400" text-anchor="middle">mismatch, document share</text><rect x="276" y="552" width="208" height="88" rx="8" class="box"/><text x="380" y="576" class="ink" font-size="13" font-weight="600" text-anchor="middle">API and UI</text><text x="380" y="592" class="quiet" font-size="11.5" font-weight="400" text-anchor="middle">Restore plan vs. quarantine</text><text x="380" y="608" class="quiet" font-size="11.5" font-weight="400" text-anchor="middle">plan, Day 1-5-7 timeline</text><text x="380" y="624" class="quiet" font-size="11.5" font-weight="400" text-anchor="middle">Rules / rules + AI toggle</text><rect x="520" y="552" width="208" height="88" rx="8" class="box ai"/><text x="624" y="576" class="ink" font-size="13" font-weight="600" text-anchor="middle">Narrator interface</text><text x="624" y="592" class="ink" font-size="11.5" font-weight="400" text-anchor="middle">Template: ranking reasons</text><text x="624" y="608" class="ink" font-size="11.5" font-weight="400" text-anchor="middle">AI: Foundation-sec-8B,</text><text x="624" y="624" class="ink" font-size="11.5" font-weight="400" text-anchor="middle">cites rows, validated</text><rect x="24" y="674" width="14" height="14" rx="3" class="box ai"/><text x="46" y="685" class="quiet" font-size="11.5" font-weight="400" text-anchor="start">Has an AI implementation; the rules version always works on its own</text></svg></div><figcaption>POC architecture: 12 components, 2 AI-ready interfaces</figcaption></figure>
+<p>The classifier writes each ledger record and the feed matcher marks matches on it; the incident engine and UI only read it.</p>
+<p><strong>The integration contract.</strong> The event record below and the ledger schema are the only parts the product would need to adopt later; everything else in the POC is replaceable.</p>
+<pre><code class="language-json">{
+  &quot;ts&quot;: &quot;2026-11-02T09:14:07Z&quot;,
+  &quot;volume&quot;: &quot;finance&quot;,
+  &quot;path&quot;: &quot;/Q3/Q3-Report.pdf&quot;,
+  &quot;user&quot;: &quot;jdoe@corp&quot;,
+  &quot;client_ip&quot;: &quot;10.0.0.15&quot;,
+  &quot;type_class&quot;: &quot;pe_binary&quot;,
+  &quot;classifier&quot;: &quot;rules&quot;,
+  &quot;ext_mismatch&quot;: true,
+  &quot;sha256&quot;: &quot;...&quot;,
+  &quot;tlsh&quot;: &quot;...&quot;,
+  &quot;size&quot;: 245760
+}
+</code></pre>
+<h2 id="tech-stack-and-repository-layout">Tech stack and repository layout</h2>
+<p>Everything is open source, runs in one Docker Compose project, and needs no network access during the demo; items marked stretch start only after the full demo works.</p>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Rules core (must-have)</th>
+<th>AI layer (should-have)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SMB share and audit</td>
+<td>Samba container with <code>vfs_full_audit</code> (user, IP, path, operation)</td>
+<td>No change</td>
+</tr>
+<tr>
+<td>Event capture</td>
+<td>Audit-log tailer, with a Python file watcher as fallback</td>
+<td>No change</td>
+</tr>
+<tr>
+<td>Antivirus baseline</td>
+<td>ClamAV container with pre-pulled definitions, to show today's verdict</td>
+<td>No change</td>
+</tr>
+<tr>
+<td>File typing</td>
+<td>Magic-byte signature table and structural checks, extension-mismatch rule</td>
+<td>Magika as primary, magic bytes as fallback</td>
+</tr>
+<tr>
+<td>Document and script checks</td>
+<td>oletools (macros), YARA-X rules (LNK, scripts, PE)</td>
+<td>Stretch: LLM explanation of extracted macro code</td>
+</tr>
+<tr>
+<td>Hashing</td>
+<td>SHA-256; stretch: TLSH for variant similarity</td>
+<td>No change</td>
+</tr>
+<tr>
+<td>Unknown-binary risk</td>
+<td>Stretch: entropy and <code>pefile</code> heuristics</td>
+<td>Stretch: EMBER2024 LightGBM risk score</td>
+</tr>
+<tr>
+<td>Threat feed</td>
+<td>Fabricated local feed in MalwareBazaar export format</td>
+<td>No change</td>
+</tr>
+<tr>
+<td>Ledger and API</td>
+<td>SQLite, FastAPI, simulated clock</td>
+<td>No change</td>
+</tr>
+<tr>
+<td>Quarantine narrative</td>
+<td>Jinja2 template of ranking reasons</td>
+<td>Foundation-sec-8B via Ollama, with citation validator and template fallback</td>
+</tr>
+<tr>
+<td>UI</td>
+<td>One static page: restore plan vs. quarantine plan</td>
+<td>Adds the rules / rules + AI toggle</td>
+</tr>
+<tr>
+<td>Attack simulation</td>
+<td>Existing safe simulator (UNTY-89818) or a Ransomwhere-style script</td>
+<td>No change</td>
+</tr>
+</tbody>
+</table></div>
+<pre><code>dwta-poc/
+  SPEC.md              # product spec, demo story, acceptance scenarios
+  CLAUDE.md            # coding conventions and rules for Claude Opus 5.5
+  specs/               # schemas, OpenAPI, ranking rules, prompts
+  lab/                 # docker-compose, smb.conf, ClamAV baseline, test artifacts
+  services/
+    collector/         # audit-log tailer and file watcher
+    classifier/        # Classifier interface: rules, Magika
+    ledger/            # SQLite schema, repository, simulated clock
+    matcher/           # feed ingest and retroactive lookup
+    incident/          # dwell-window query and ranking
+    narrator/          # Narrator interface: template, LLM
+    api/               # FastAPI
+  ui/                  # static page
+  eval/                # corpus, harness, results
+  tests/               # contract and acceptance tests
+</code></pre>
+<h2 id="step-by-step-implementation-the-48-hour-build">Step-by-step implementation: the 48-hour build</h2>
+<p>The whole build fits in 48 hours with four people working in parallel lanes. The rules-only core is protected first, and each block ends with a gate that must pass before the next block starts.</p>
+<figure><div class="wrap"><svg class="diagram" viewBox="0 0 760 360" role="img" aria-label="The rules-only core must run by H24; the full demo by H36"><text x="24" y="28" class="ink" font-size="15" font-weight="600" text-anchor="start">The rules-only core must run by H24; the full demo by H36</text><text x="24" y="48" class="quiet" font-size="11.5" font-weight="400" text-anchor="start">Four lanes in parallel, hours from the start of the hackathon</text><line x1="132.0" x2="132.0" y1="106" y2="308" class="grid"/><text x="132.0" y="94" class="quiet" font-size="11.5" font-weight="400" text-anchor="middle">H0</text><line x1="205.5" x2="205.5" y1="106" y2="308" class="grid"/><text x="205.5" y="94" class="quiet" font-size="11.5" font-weight="400" text-anchor="middle">H6</text><line x1="279.0" x2="279.0" y1="106" y2="308" class="grid"/><text x="279.0" y="94" class="quiet" font-size="11.5" font-weight="400" text-anchor="middle">H12</text><line x1="352.5" x2="352.5" y1="106" y2="308" class="grid"/><text x="352.5" y="94" class="quiet" font-size="11.5" font-weight="400" text-anchor="middle">H18</text><line x1="426.0" x2="426.0" y1="106" y2="308" class="grid"/><text x="426.0" y="94" class="quiet" font-size="11.5" font-weight="400" text-anchor="middle">H24</text><line x1="499.5" x2="499.5" y1="106" y2="308" class="grid"/><text x="499.5" y="94" class="quiet" font-size="11.5" font-weight="400" text-anchor="middle">H30</text><line x1="573.0" x2="573.0" y1="106" y2="308" class="grid"/><text x="573.0" y="94" class="quiet" font-size="11.5" font-weight="400" text-anchor="middle">H36</text><line x1="646.5" x2="646.5" y1="106" y2="308" class="grid"/><text x="646.5" y="94" class="quiet" font-size="11.5" font-weight="400" text-anchor="middle">H42</text><line x1="720.0" x2="720.0" y1="106" y2="308" class="grid"/><text x="720.0" y="94" class="quiet" font-size="11.5" font-weight="400" text-anchor="middle">H48</text><line x1="132.0" x2="720.0" y1="106" y2="106" class="edge"/><text x="24" y="136" class="ink" font-size="13" font-weight="400" text-anchor="start">Whole team</text><text x="24" y="176" class="ink" font-size="13" font-weight="400" text-anchor="start">Security eng.</text><text x="24" y="216" class="ink" font-size="13" font-weight="400" text-anchor="start">Backend eng.</text><text x="24" y="256" class="ink" font-size="13" font-weight="400" text-anchor="start">AI engineer</text><text x="24" y="296" class="ink" font-size="13" font-weight="400" text-anchor="start">PM / QA</text><rect x="133.0" y="121" width="34.75" height="22" rx="5" class="bar"/><text x="176.75" y="136" class="ink" font-size="10.5" font-weight="400" text-anchor="start">Spec pack</text><rect x="574.0" y="121" width="96.0" height="22" rx="5" class="bar"/><text x="579.0" y="136" class="ink" font-size="10.5" font-weight="400" text-anchor="start">Rehearse</text><rect x="672.0" y="121" width="47.0" height="22" rx="5" class="bar"/><text x="677.0" y="136" class="ink" font-size="10.5" font-weight="400" text-anchor="start">Submit</text><rect x="169.75" y="161" width="108.25" height="22" rx="5" class="bar"/><text x="174.75" y="176" class="ink" font-size="10.5" font-weight="400" text-anchor="start">Lab + collector</text><rect x="280.0" y="161" width="145.0" height="22" rx="5" class="bar"/><text x="285.0" y="176" class="ink" font-size="10.5" font-weight="400" text-anchor="start">Rules + ranking</text><rect x="427.0" y="161" width="145.0" height="22" rx="5" class="bar"/><text x="432.0" y="176" class="ink" font-size="10.5" font-weight="400" text-anchor="start">FP + overhead runs</text><rect x="169.75" y="201" width="108.25" height="22" rx="5" class="bar"/><text x="174.75" y="216" class="ink" font-size="10.5" font-weight="400" text-anchor="start">Ledger + API</text><rect x="280.0" y="201" width="145.0" height="22" rx="5" class="bar"/><text x="285.0" y="216" class="ink" font-size="10.5" font-weight="400" text-anchor="start">Matcher + incident</text><rect x="427.0" y="201" width="145.0" height="22" rx="5" class="bar"/><text x="432.0" y="216" class="ink" font-size="10.5" font-weight="400" text-anchor="start">Demo UI</text><rect x="169.75" y="241" width="108.25" height="22" rx="5" class="bar ai"/><text x="174.75" y="256" class="ink" font-size="10.5" font-weight="400" text-anchor="start">Ollama + Magika</text><rect x="280.0" y="241" width="145.0" height="22" rx="5" class="bar ai"/><text x="285.0" y="256" class="ink" font-size="10.5" font-weight="400" text-anchor="start">Narrator + validator</text><rect x="427.0" y="241" width="145.0" height="22" rx="5" class="bar ai"/><text x="432.0" y="256" class="ink" font-size="10.5" font-weight="400" text-anchor="start">AI toggle + cache</text><rect x="169.75" y="281" width="108.25" height="22" rx="5" class="bar"/><text x="174.75" y="296" class="ink" font-size="10.5" font-weight="400" text-anchor="start">Corpus + clock</text><rect x="280.0" y="281" width="145.0" height="22" rx="5" class="bar"/><text x="285.0" y="296" class="ink" font-size="10.5" font-weight="400" text-anchor="start">Acceptance runs</text><rect x="427.0" y="281" width="145.0" height="22" rx="5" class="bar"/><text x="432.0" y="296" class="ink" font-size="10.5" font-weight="400" text-anchor="start">Measurements</text><line x1="279.0" x2="279.0" y1="106" y2="308" class="gateline"/><path d="M279.0 100l6 6l-6 6l-6 -6z" class="diamond"/><text x="279.0" y="76" class="ink" font-size="13" font-weight="600" text-anchor="middle">Gate 1</text><line x1="426.0" x2="426.0" y1="106" y2="308" class="gateline go"/><path d="M426.0 100l6 6l-6 6l-6 -6z" class="diamond go"/><text x="426.0" y="76" class="ink" font-size="13" font-weight="600" text-anchor="middle">Gate 2: go/no-go</text><line x1="573.0" x2="573.0" y1="106" y2="308" class="gateline"/><path d="M573.0 100l6 6l-6 6l-6 -6z" class="diamond"/><text x="573.0" y="76" class="ink" font-size="13" font-weight="600" text-anchor="middle">Gate 3</text><rect x="132" y="326" width="14" height="14" rx="3" class="bar ai"/><text x="154" y="337" class="quiet" font-size="11.5" font-weight="400" text-anchor="start">AI engineer’s lane (should-have)</text><line x1="360" x2="384" y1="333" y2="333" class="gateline go"/><text x="392" y="337" class="quiet" font-size="11.5" font-weight="400" text-anchor="start">Go/no-go: if the core is not solid, drop the LLM</text></svg></div><figcaption>48-hour build plan: 4 lanes, 3 gates</figcaption></figure>
+<p>Gate 2 at H24 is the go/no-go: if the rules-only scenario does not run end to end by then, the AI engineer joins the core lane and we drop the LLM, keeping only Magika.</p>
+<ol class="steps" start="0">
+<li><strong>Before the clock starts</strong>
+<ul>
+<li>Confirm what the hackathon rules allow as prep. This plan assumes environment setup is allowed and product code is not.</li>
+<li>InfoSec approves the safe-artifact list: EICAR, benign test binaries, a harmless macro document, a shortcut file.</li>
+<li>Pull Docker images, ClamAV definitions, Magika and the LLM weights in advance, so nothing downloads during the build.</li>
+<li><strong>Done when:</strong> a client can mount the lab share with the network unplugged.</li>
+</ul></li>
+<li><strong>H0-H3: Spec pack (whole team)</strong>
+<ul>
+<li>Event and ledger schemas, classification taxonomy, ranking rules with weights, OpenAPI contract, prompt and output schema, <code>CLAUDE.md</code>.</li>
+<li>Acceptance scenarios for simulated Days 1, 5 and 7.</li>
+<li><strong>Done when:</strong> the acceptance tests exist and fail, and the lead signs off.</li>
+</ul></li>
+<li><strong>H3-H12: Walking skeleton (four lanes in parallel)</strong>
+<ul>
+<li>Security: Samba <code>vfs_full_audit</code> and the collector, including temp-file-then-rename writes.</li>
+<li>Backend: SQLite ledger, API skeleton, command-line runner, simulated clock.</li>
+<li class="ai-item">AI: Ollama serving the LLM; Magika wrapper behind the <code>Classifier</code> interface.</li>
+<li>PM/QA: test corpus, scenario script, first draft of the demo script.</li>
+<li><span class="gate">Gate 1 (H12)</span> simulated Day 1 runs end to end from the command line: copy, event, classification, ledger row, alert.</li>
+</ul></li>
+<li><strong>H12-H24: Core features</strong>
+<ul>
+<li>Security: full rules classifier (magic bytes, structural checks, oletools, YARA-X) and ranking weights.</li>
+<li>Backend: idempotent feed matcher, incident engine with dwell-window query and ranking, template narrative, quarantine move after admin approval.</li>
+<li class="ai-item">AI: narrator with citation validator and template fallback.</li>
+<li>PM/QA: acceptance runs after every merge.</li>
+<li><span class="gate go">Gate 2 (H24, go/no-go)</span> the rules-only scenario for simulated Days 1, 5 and 7 runs end to end through the API.</li>
+</ul></li>
+<li><strong>H24-H36: Demo UI and AI integration</strong>
+<ul>
+<li>Backend: one static page with the restore plan, quarantine plan, scenario strip and toggle.</li>
+<li class="ai-item">AI: Magika as primary classifier, narratives precomputed when the incident fires, the rules / rules + AI toggle.</li>
+<li>Security: ClamAV baseline on the planted file, false-positive runs on a document share vs. a software share, overhead on a 1,000-file copy.</li>
+<li>PM/QA: write up the measurements and set up the backup recording.</li>
+<li><span class="gate">Gate 3 (H36)</span> both modes run live from a cold start.</li>
+</ul></li>
+<li><strong>H36-H44: Freeze and rehearse (whole team)</strong>
+<ul>
+<li>Fix only demo-blocking bugs. Code freeze at H40, then three full rehearsals and a backup recording.</li>
+</ul></li>
+<li><strong>H44-H48: Buffer and submission</strong>
+<ul>
+<li>Final rehearsal, slides and submission.</li>
+</ul></li>
+</ol>
+
+<p><strong>Rest:</strong> each person takes one block of about 5 hours off between H16 and H34, staggered so no two lanes stop at once.</p>
+<p><strong>Stretch, only after Gate 3:</strong> EMBER2024 risk score, TLSH variant matching, entropy and <code>pefile</code> heuristics, macro explainer, analyst Q&amp;A agent.</p>
+<h2 id="how-we-build-spec-driven-with-claude-opus-5-5">How we build: spec-driven with Claude Opus 5.5</h2>
+<p>Humans write the specs and review every merge; Claude Opus 5.5 writes the code, tests, Docker files and docs against those specs. Each lane runs its own Opus session against the shared spec pack, and the contract tests written in the spec block are what keep four parallel sessions compatible.</p>
+<p><strong>The loop, per module</strong></p>
+<ol>
+<li>Write or update the module's spec: purpose, inputs and outputs, edge cases, acceptance tests.</li>
+<li>Ask Opus for the contract tests first, then the implementation.</li>
+<li>Run the tests locally and in CI.</li>
+<li>A human reviews the diff against the spec, not just the test results.</li>
+<li>If the behavior must change, change the spec and regenerate. Never patch around the spec.</li>
+</ol>
+<p><strong>Repo conventions that keep sessions consistent</strong></p>
+<ul>
+<li><code>SPEC.md</code> and <code>specs/</code> are the single source of truth. Every Opus session starts by reading them.</li>
+<li><code>CLAUDE.md</code> fixes language versions, style, logging, error handling, and the rule that no code may block the write path.</li>
+<li>Modules stay small and talk only through the schemas, so one can be regenerated without touching the others.</li>
+<li>Each lane merges to main at least every 3 hours, and CI runs the contract tests on every merge, so integration problems surface early.</li>
+</ul>
+<p><strong>Where Opus helps, and where a human must decide</strong></p>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>Opus does well</th>
+<th>A human owns</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Parsers, schemas, contract tests</td>
+<td>Samba and lab setup, real SMB client behavior</td>
+</tr>
+<tr>
+<td>Matcher, ranking code, report template</td>
+<td>Ranking weights and false-positive tuning</td>
+</tr>
+<tr>
+<td>FastAPI, static UI, Docker Compose</td>
+<td>What the demo can honestly claim</td>
+</tr>
+<tr>
+<td>Model wrappers, evaluation harness, output validator</td>
+<td>Judging whether AI output is security-correct, model licenses</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="team-and-roles">Team and roles</h2>
+<p>Four people cover the hackathon, one per lane; the AI engineer's lane is the one we cut first if the core falls behind.</p>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Owns</th>
+<th>Steps</th>
+<th>Skills</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Security / file-share engineer (spec owner)</td>
+<td>Spec pack lead, Samba lab, collector, rules classifier, ranking rules, ClamAV baseline, false-positive runs</td>
+<td>0-4</td>
+<td>Samba audit, file formats, dwell-time tradecraft, safe lab handling</td>
+</tr>
+<tr>
+<td>Backend / Python engineer</td>
+<td>Ledger, simulated clock, API, matcher, incident engine, demo UI, CI</td>
+<td>1-5</td>
+<td>Python, SQLite, FastAPI, Docker, critical review of generated code</td>
+</tr>
+<tr>
+<td>ML / AI engineer</td>
+<td>Ollama serving, Magika, narrator, citation validator, toggle</td>
+<td>1-4</td>
+<td>Model serving (Ollama or vLLM), evaluation design, output schemas, guardrails</td>
+</tr>
+<tr>
+<td>PM / QA</td>
+<td>Prep and approvals, test corpus, acceptance runs, measurements, demo script, backup recording</td>
+<td>0-6</td>
+<td>Test design, stakeholder and InfoSec liaison, demo storytelling</td>
+</tr>
+</tbody>
+</table></div>
+<p>With only three people, the backend engineer absorbs the acceptance runs, and the AI scope shrinks to Magika plus the template narrative.</p>
+<h2 id="evaluation-and-definition-of-done">Evaluation and definition of done</h2>
+<p>The POC is done when both modes run live from a cold start and every check below is measured; the target values are proposals for the team to agree in the spec block.</p>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Applies to</th>
+<th>How we measure</th>
+<th>Proposed target</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Demo scenario, simulated Days 1, 5, 7</td>
+<td>Both</td>
+<td>Acceptance tests, live run</td>
+<td>Passes from a cold start</td>
+</tr>
+<tr>
+<td>Antivirus baseline</td>
+<td>Both</td>
+<td>ClamAV scan of the planted file</td>
+<td>Reports clean, showing the gap honestly</td>
+</tr>
+<tr>
+<td>Write-path overhead</td>
+<td>Both</td>
+<td>1,000-file copy with and without the collector</td>
+<td>No user-visible slowdown; number recorded</td>
+</tr>
+<tr>
+<td>False positives</td>
+<td>Both</td>
+<td>Alerts on a benign document share vs. a software share</td>
+<td>Counts recorded; document share near zero</td>
+</tr>
+<tr>
+<td>Disguised-file detection</td>
+<td>Both</td>
+<td>Corpus of renamed files</td>
+<td>Rules catch every corpus case; Magika equal or better</td>
+</tr>
+<tr>
+<td>Narrative citations</td>
+<td>AI</td>
+<td>Validator on 2 golden incidents</td>
+<td>100% of claims cite a ledger row</td>
+</tr>
+<tr>
+<td>Narrative accuracy</td>
+<td>AI</td>
+<td>Human review of the 2 golden incidents</td>
+<td>Zero factual errors</td>
+</tr>
+<tr>
+<td>Fallback</td>
+<td>AI</td>
+<td>Stop the LLM mid-demo</td>
+<td>Template narrative appears, demo continues</td>
+</tr>
+</tbody>
+</table></div>
+<p>Deliverables: the running lab, the repo, a one-page results sheet, a 5-minute demo script and a backup recording.</p>
+<h2 id="risks-and-mitigations">Risks and mitigations</h2>
+<p>The two risks most likely to break a 48-hour build are SMB event timing and running out of time; both have a fallback that keeps the demo intact.</p>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>Risk</th>
+<th>Impact</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SMB clients write temp files and rename them, so close events land on the wrong path</td>
+<td>Missed or duplicate ledger rows</td>
+<td>Collector follows renames; switch to the Python file watcher if audit parsing is not reliable by Gate 1</td>
+</tr>
+<tr>
+<td>48 hours is not enough for everything</td>
+<td>Unfinished demo</td>
+<td>Must/should/stretch fixed in the spec block; the rules-only path is protected first; drop the LLM at Gate 2 if needed</td>
+</tr>
+<tr>
+<td>Downloads or installs fail on the day</td>
+<td>Lost hours</td>
+<td>Pull images, ClamAV definitions, Magika and LLM weights before the clock starts; run the lab offline</td>
+</tr>
+<tr>
+<td>LLM states something the evidence does not support</td>
+<td>Loss of trust in the demo</td>
+<td>Citation validator, template fallback, and the validator shown rejecting a bad output</td>
+</tr>
+<tr>
+<td>No GPU or Apple Silicon machine for the LLM</td>
+<td>Slow or missing narrative</td>
+<td>Book hardware during prep; precompute narratives when the incident fires</td>
+</tr>
+<tr>
+<td>Four parallel Opus sessions drift apart</td>
+<td>Modules that don't fit together</td>
+<td>Contract tests from the spec block, merges every 3 hours, CI on every merge</td>
+</tr>
+<tr>
+<td>Generated detection logic looks right but isn't</td>
+<td>False confidence</td>
+<td>Every rule is run against the corpus and the result recorded</td>
+</tr>
+<tr>
+<td>Model and feed licenses block later productization</td>
+<td>Rework before product integration</td>
+<td>Legal checks Foundation-sec (built on Llama 3.1), EMBER2024 and abuse.ch terms after the hackathon, before any product work</td>
+</tr>
+<tr>
+<td>"Is this AI theater?"</td>
+<td>Weak reception</td>
+<td>The rules / rules + AI toggle, the ClamAV baseline and the measured results answer it</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="open-decisions-for-the-dev-team">Open decisions for the DEV team</h2>
+<p>These decisions need an answer before the build starts or during the spec block; tick each one off as we agree it, and comment with your view.</p>
+<ul class="tasks">
+<li><strong>Hackathon rules:</strong> what prep is allowed before the clock starts (images, models, lab VM, an empty repo skeleton)?</li>
+<li><strong>Demo audience:</strong> hackathon judges, engineering leadership or a customer advisory group? This sets how polished the UI must be.</li>
+<li><strong>Owners:</strong> names for the four lanes.</li>
+<li><strong>Antivirus behavior:</strong> can the Edge antivirus owners confirm there is no retroactive rescan of unchanged files?</li>
+<li><strong>Primary event source:</strong> Samba audit-log tailer, or the Python file watcher from the start?</li>
+<li><strong>Quarantine mechanics:</strong> move to a locked folder, or lock down in place with a deny-all ACL?</li>
+<li><strong>Dwell-window default:</strong> 30 days, or shorter for the demo story?</li>
+<li><strong>Ranking weights:</strong> who signs off on them, security or PM?</li>
+<li><strong>LLM choice:</strong> Foundation-sec-8B Instruct, Foundation-sec-8B Reasoning, or a general model such as Qwen2.5-7B?</li>
+<li><strong>Feed realism:</strong> fabricated feed only, or also ingest a real MalwareBazaar hash export (hashes only, never samples)?</li>
+<li><strong>Attack simulator:</strong> reuse UNTY-89818, or a standalone script?</li>
+<li><strong>LLM hardware:</strong> which GPU or Apple Silicon machine, and who books it?</li>
+</ul>
+<h2 id="sources">Sources</h2>
+<ul>
+<li><a href="https://docs.nasuni.com/docs/nasuni-antivirus-protection">Antivirus Protection</a>, Nasuni documentation</li>
+<li><a href="https://docs.nasuni.com/docs/nmc-cyber-resilience-page">NMC Cyber Resilience page</a>, Nasuni documentation</li>
+<li><a href="https://docs.nasuni.com/docs/nmc-task-overview">NMC Task Overview</a>, Nasuni documentation</li>
+<li><a href="https://docs.nasuni.com/docs/nasuni-ransomware-protection">Nasuni Ransomware Protection</a>, Nasuni documentation</li>
+<li><a href="https://docs.nasuni.com/docs/chapter-5-security">Security, Chapter 5</a>, Nasuni documentation</li>
+</ul>
+</main>
+</body>
+</html>

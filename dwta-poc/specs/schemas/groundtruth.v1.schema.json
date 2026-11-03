@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dwta.local/schemas/groundtruth.v1",
+  "title": "dwta.groundtruth/v1: simulator answer key (spec \u00a76.2)",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "dwta.groundtruth/v1"
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "scenario": {
+      "type": "string"
+    },
+    "step": {
+      "type": "integer"
+    },
+    "op_id": {
+      "type": "string"
+    },
+    "sim_ts": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d(\\.\\d+)?Z$"
+    },
+    "wall_ts": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d(\\.\\d+)?Z$"
+    },
+    "actor": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "identity": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "client_ip": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "client_name": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "action": {
+      "type": "string"
+    },
+    "volume": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "op": {
+      "type": "string"
+    },
+    "path": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "prev_path": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "artifact": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "sha256": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "malicious": {
+      "type": "boolean"
+    },
+    "result": {
+      "enum": [
+        "ok",
+        "error"
+      ]
+    },
+    "expected_event": {
+      "enum": [
+        "write_close",
+        "rename",
+        "delete",
+        "mkdir",
+        null
+      ]
+    }
+  },
+  "required": [
+    "schema",
+    "run_id",
+    "step",
+    "op_id",
+    "sim_ts",
+    "wall_ts",
+    "action",
+    "op",
+    "malicious",
+    "result",
+    "expected_event"
+  ],
+  "additionalProperties": true
+}

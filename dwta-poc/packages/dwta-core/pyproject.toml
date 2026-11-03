@@ -1,0 +1,10 @@
+[project]
+name = "dwta-core"
+version = "1.0.0"
+description = "Shared, stdlib-only building blocks: contracts, simulated clock, journal, config"
+requires-python = ">=3.12"
+dependencies = []
+
+[build-system]
+requires = ["uv_build>=0.9,<0.10"]
+build-backend = "uv_build"

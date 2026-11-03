@@ -1,0 +1,203 @@
+# DwTA lab (spec §2). All instance values come from lab/<INSTANCE>/.env, written by `dwta-lab init`.
+# Run through the CLI:  dwta-lab up --instance dwta1
+# (= docker compose -p <INSTANCE> --env-file lab/<INSTANCE>/.env -f deploy/compose/docker-compose.yml up -d)
+
+x-python-build: &python-build
+  context: ../..
+  dockerfile: deploy/images/python-service/Dockerfile
+
+x-db-env: &db-env
+  DWTA_DB_HOST: ledger
+  DWTA_DB_NAME: dwta
+
+x-client: &client
+  build: { context: ../images/smbclient }
+  image: dwta-smbclient:1.0
+  restart: unless-stopped
+  init: true
+
+networks:
+  lab:
+    name: ${INSTANCE}-lab
+    ipam:
+      config:
+        - subnet: ${LAB_SUBNET}
+
+volumes:
+  pgdata:
+
+services:
+  # ---------------------------------------------------------------- B2 Samba share
+  samba:
+    build: { context: ../images/samba }
+    image: dwta-samba:1.0
+    restart: unless-stopped
+    environment:
+      SMB_IDENTITIES: ${SMB_IDENTITIES}
+      SMB_PW_ADMIN: ${SMB_PW_ADMIN}
+      SMB_PW_JDOE: ${SMB_PW_JDOE}
+      SMB_PW_ASMITH: ${SMB_PW_ASMITH}
+      SMB_PW_SVC_BACKUP: ${SMB_PW_SVC_BACKUP}
+    volumes:
+      - ${LAB_DIR}/data/finance:/srv/shares/finance
+      - ${LAB_DIR}/data/software:/srv/shares/software
+      - ${LAB_DIR}/logs:/var/log/samba
+    ports:
+      - "127.0.0.1:${SMB_PORT}:445"
+    networks:
+      lab: { ipv4_address: "${IP_SAMBA}" }
+
+  # ---------------------------------------------------------------- B1 SMB clients (one per actor machine)
+  client-admin:
+    <<: *client
+    volumes:
+      - ${LAB_DIR}/secrets/smb-admin:/run/secrets/smb-admin:ro
+      - ${LAB_DIR}/run/staging:/staging
+      - ${LAB_DIR}/../corpus:/corpus:ro
+    networks:
+      lab: { ipv4_address: "${IP_CLIENT_ADMIN}" }
+
+  client-jdoe:
+    <<: *client
+    volumes:
+      - ${LAB_DIR}/secrets/smb-jdoe:/run/secrets/smb-jdoe:ro
+      - ${LAB_DIR}/run/staging:/staging
+      - ${LAB_DIR}/../corpus:/corpus:ro
+    networks:
+      lab: { ipv4_address: "${IP_CLIENT_JDOE}" }
+
+  client-asmith:
+    <<: *client
+    volumes:
+      - ${LAB_DIR}/secrets/smb-asmith:/run/secrets/smb-asmith:ro
+      - ${LAB_DIR}/run/staging:/staging
+      - ${LAB_DIR}/../corpus:/corpus:ro
+    networks:
+      lab: { ipv4_address: "${IP_CLIENT_ASMITH}" }
+
+  client-attack:
+    <<: *client
+    volumes:
+      - ${LAB_DIR}/secrets/smb-svc-backup:/run/secrets/smb-svc-backup:ro
+      - ${LAB_DIR}/secrets/smb-jdoe:/run/secrets/smb-jdoe:ro          # stolen credentials (later scenario)
+      - ${LAB_DIR}/run/staging:/staging
+      - ${LAB_DIR}/../corpus:/corpus:ro
+    networks:
+      lab: { ipv4_address: "${IP_CLIENT_ATTACK}" }
+
+  # ---------------------------------------------------------------- B4 collector
+  collector:
+    build: { <<: *python-build, target: collector }
+    image: dwta-collector:1.0
+    restart: unless-stopped
+    environment:
+      DWTA_AUDIT_LOG: /lab/logs/audit.log
+      DWTA_DATA_DIR: /lab/data
+      DWTA_RUN_DIR: /lab/run
+      DWTA_SHARE_ROOT: /srv/shares
+      DWTA_LAB_SUBNET: ${LAB_SUBNET}
+      DWTA_GATEWAY_IP: ${IP_GATEWAY}
+      COLLECTOR_SOURCE: ${COLLECTOR_SOURCE}
+      RENAME_WINDOW: ${RENAME_WINDOW}
+    volumes:
+      - ${LAB_DIR}/logs:/lab/logs:ro
+      - ${LAB_DIR}/data:/lab/data:ro
+      - ${LAB_DIR}/run:/lab/run
+    depends_on:
+      samba: { condition: service_healthy }
+    networks:
+      lab: { ipv4_address: "${IP_COLLECTOR}" }
+
+  # ---------------------------------------------------------------- B6 ledger
+  ledger:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: dwta_admin
+      POSTGRES_PASSWORD: ${LEDGER_PW_ADMIN}
+      POSTGRES_DB: dwta
+    command: ["postgres", "-c", "shared_buffers=64MB", "-c", "max_connections=40"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dwta_admin -d dwta"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    networks:
+      lab: { ipv4_address: "${IP_LEDGER}" }
+
+  ledger-migrate:
+    build: { <<: *python-build, target: ledger-migrate }
+    image: dwta-ledger-migrate:1.0
+    restart: "no"
+    environment:
+      <<: *db-env
+      DWTA_DB_USER: dwta_admin
+      DWTA_DB_PASSWORD: ${LEDGER_PW_ADMIN}
+      LEDGER_PW_CLASSIFIER: ${LEDGER_PW_CLASSIFIER}
+      LEDGER_PW_MATCHER: ${LEDGER_PW_MATCHER}
+      LEDGER_PW_INCIDENT: ${LEDGER_PW_INCIDENT}
+      LEDGER_PW_READER: ${LEDGER_PW_READER}
+    depends_on:
+      ledger: { condition: service_healthy }
+    networks: [lab]
+
+  # ---------------------------------------------------------------- B5 classifier
+  classifier:
+    build: { <<: *python-build, target: classifier }
+    image: dwta-classifier:1.0
+    restart: unless-stopped
+    environment:
+      <<: *db-env
+      DWTA_DB_USER: dwta_classifier
+      DWTA_DB_PASSWORD: ${LEDGER_PW_CLASSIFIER}
+      DWTA_DATA_DIR: /lab/data
+      DWTA_RUN_DIR: /lab/run
+    volumes:
+      - ${LAB_DIR}/data:/lab/data:ro
+      - ${LAB_DIR}/run:/lab/run
+    depends_on:
+      ledger-migrate: { condition: service_completed_successfully }
+    networks:
+      lab: { ipv4_address: "${IP_CLASSIFIER}" }
+
+  # ---------------------------------------------------------------- B8 feed matcher (no share data mounted: MAT-01)
+  matcher:
+    build: { <<: *python-build, target: matcher }
+    image: dwta-matcher:1.0
+    restart: unless-stopped
+    environment:
+      <<: *db-env
+      DWTA_DB_USER: dwta_matcher
+      DWTA_DB_PASSWORD: ${LEDGER_PW_MATCHER}
+      DWTA_FEEDS_DIR: /lab/feeds
+      DWTA_RUN_DIR: /lab/run
+    volumes:
+      - ${LAB_DIR}/feeds:/lab/feeds
+      - ${LAB_DIR}/run:/lab/run
+    depends_on:
+      ledger-migrate: { condition: service_completed_successfully }
+    networks:
+      lab: { ipv4_address: "${IP_MATCHER}" }
+
+  # ---------------------------------------------------------------- B9/B10 incident intake + review engine
+  incident:
+    build: { <<: *python-build, target: incident }
+    image: dwta-incident:1.0
+    restart: unless-stopped
+    environment:
+      <<: *db-env
+      DWTA_DB_USER: dwta_incident
+      DWTA_DB_PASSWORD: ${LEDGER_PW_INCIDENT}
+      DWTA_INCIDENTS_DIR: /lab/incidents
+      SIM_EPOCH: ${SIM_EPOCH}
+      DWTA_AV_SCANNER: none        # step ⑤ rescan: ClamAV scanner arrives in v2
+      DWTA_RUN_DIR: /lab/run
+    volumes:
+      - ${LAB_DIR}/incidents:/lab/incidents
+      - ${LAB_DIR}/run:/lab/run
+    depends_on:
+      ledger-migrate: { condition: service_completed_successfully }
+    networks:
+      lab: { ipv4_address: "${IP_INCIDENT}" }

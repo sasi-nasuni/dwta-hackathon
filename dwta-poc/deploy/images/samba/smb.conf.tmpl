@@ -1,0 +1,46 @@
+# Generated from smb.conf.tmpl by entrypoint.sh. Do not edit inside the container.
+[global]
+  server role = standalone server
+  workgroup = DWTA
+  netbios name = DWTA-LAB
+  server string = DwTA lab
+  server min protocol = SMB2
+  smb ports = 445
+  disable netbios = yes
+  map to guest = never
+  restrict anonymous = 2
+  load printers = no
+  printing = bsd
+  printcap name = /dev/null
+  disable spoolss = yes
+  logging = file
+  log file = /var/log/samba/smbd.log
+  # SMBS-14: rotate logs (incl. audit.log) at 50 MB; Samba renames to <file>.old
+  max log size = 51200
+  debug prefix timestamp = yes
+  debug hires timestamp = yes
+  # SMBS-13: audit records go to their own file through the full_audit debug class
+  log level = 1 full_audit:1@/var/log/samba/audit.log
+  # SMBS-10/11/12: audit every share. fruit/streams_xattr are NOT loaded: Docker Desktop bind
+  # mounts have no xattr support, so they break rename/delete (V-01). The collector ignores ._* files.
+  vfs objects = full_audit
+  full_audit:syslog = false
+  full_audit:prefix = %T|%u|%I|%m|%S|%d
+  full_audit:success = connect disconnect create_file openat close pwrite pwrite_send renameat unlinkat mkdirat
+  full_audit:failure = connect create_file renameat unlinkat
+  create mask = 0664
+  directory mask = 2775
+
+[finance]
+  path = /srv/shares/finance
+  comment = Document share
+  read only = no
+  valid users = @finance-rw
+  write list = @finance-rw
+
+[software]
+  path = /srv/shares/software
+  comment = Software share
+  read only = yes
+  valid users = @finance-rw @software-rw
+  write list = @software-rw

@@ -1,0 +1,23 @@
+# Pre-restore review ranking (spec §5.10.3). Proposed values in use until the team signs off (OQ-02).
+# Re-read for every review; the review records this file's version and SHA-256 (ENG-07/08).
+version = "2026-11-03.4"
+min_score = 30             # below this a file is not listed
+max_window_days = 90       # sanity cap; the window comes from the admin's restore time
+tie_break = ["score:desc", "sim_ts:asc"]
+
+[levels]                   # suspicion level shown to the admin
+high = 100
+medium = 60
+low = 30
+
+[signals]
+S-FEED        = { enabled = true, weight = 100 }
+S-USER        = { enabled = true, weight = 40 }
+S-IP          = { enabled = true, weight = 20 }
+S-HOST        = { enabled = true, weight = 10 }
+S-EXEC-DOC    = { enabled = true, weight = 30 }
+S-EXT         = { enabled = true, weight = 30 }
+S-MACRO       = { enabled = true, weight = 15 }
+S-YARA        = { enabled = true, weight = "from_rule" }
+S-TYPE-CHANGE = { enabled = true, weight = 30 }
+S-AV          = { enabled = true, weight = 100 }   # step ⑤ AV rescan detected the file (v2; v1 scanner = none)

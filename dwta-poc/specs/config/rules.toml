@@ -1,0 +1,31 @@
+# Write-time rules (spec §5.5.5). Severities are configuration, not code (CLS-09).
+version = "1.0"
+executable_classes = ["pe_binary", "elf_binary", "macho_binary", "script", "lnk_shortcut"]
+
+[rule.R-W1]
+description = "Executable content on a document share"
+severity = "medium"
+
+[rule.R-W2]
+description = "Disguised executable: executable content on a document share with an extension mismatch"
+severity = "high"
+
+[rule.R-W3]
+description = "Office document with auto-executing macros on a document share"
+severity = "medium"
+
+[rule.R-W4]
+description = "YARA-X rule hit"
+severity = "from_rule"
+
+[rule.R-W5]
+description = "Hash already in a threat feed when the file is written (raised by the matcher)"
+severity = "critical"
+
+[rule.FEED-MATCH]
+description = "A newly published threat feed lists the hash of a file already in the ledger (retroactive, Day 5)"
+severity = "critical"
+
+[rule.R-W6]
+description = "File type changed into an executable class since its previous version"
+severity = "high"

@@ -1,0 +1,16 @@
+[project]
+name = "dwta-collector"
+version = "1.0.0"
+description = "B4 collector: Samba audit tailer + file watcher -> fs_event journal"
+requires-python = ">=3.12"
+dependencies = ["dwta-core", "watchdog>=5"]
+
+[project.scripts]
+dwta-collector = "dwta_collector.main:main"
+
+[build-system]
+requires = ["uv_build>=0.9,<0.10"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+dwta-core = { workspace = true }
