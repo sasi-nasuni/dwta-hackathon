@@ -10,12 +10,7 @@ gives the admin a ranked, explained list of suspicious files written since the c
 
 | Path | What |
 |---|---|
-| [`DwTA-Spec-v1.ipynb`](DwTA-Spec-v1.ipynb) | Specification v1.0 (polished) |
-| [`DwTA-Spec-v1-Foundation.ipynb`](DwTA-Spec-v1-Foundation.ipynb) | Working draft with the full review history |
-| [`DwTA-POC-Implementation-Plan-v0.2.md`](DwTA-POC-Implementation-Plan-v0.2.md) | Original POC plan (also as `.html`) |
-| [`SPEC-read-budget-av-integration.md`](SPEC-read-budget-av-integration.md) | Read budget and antivirus integration |
-| [`SPEC-restore-time-suggestion.md`](SPEC-restore-time-suggestion.md) | Lookback-start (restore time) suggestion: implemented in the product integration |
-| [`ransomware-protection-overview.md`](ransomware-protection-overview.md) | How the existing Ransomware Protection works |
+| [`spec/DwTA-Spec-v1.ipynb`](spec/DwTA-Spec-v1.ipynb) | Specification v1.0 |
 | [`dwta-poc/`](dwta-poc/) | Lab implementation: Docker lab, simulator, collector, classifier, ledger, matcher, incident engine ([README](dwta-poc/README.md)) |
 | [`Hackathon-POC/`](Hackathon-POC/) | Product integration: Nasuni Edge (Unity), NBN daemon, edge-api contract, Portal (git submodules, see below) |
 
@@ -113,8 +108,7 @@ git submodule update --init   # needs access to github.com/nasuni
   admin.
 - **Activity.** Per-file audited history (writes, renames, deletes, reads), combined activity for the
   encrypted-outputs group, and volume-wide activity buckets across the review window.
-- **Lookback suggestion** ([spec](SPEC-restore-time-suggestion.md)). A rules-based engine that uses the ledger
-  only:
+- **Lookback suggestion.** A rules-based engine that uses the ledger only:
   - it traces the incident's account, IP and computer back to their first trace and offers aggressive,
     recommended and cautious starts, snapped to snapshots;
   - shared IPs or computers (NAT, VDI) are ignored.

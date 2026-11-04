@@ -5,7 +5,7 @@ files written since then that look suspicious, each with a **suspicion score and
 each one **remove** or **keep**, and the restore runs **without the removed files**. Dormant files the attacker planted
 therefore can't survive the recovery to be reused in a later attack.
 
-Specification: [`../DwTA-Spec-v1.ipynb`](../DwTA-Spec-v1.ipynb) (v1.0). Implementation notes and deviations:
+Specification: [`../spec/DwTA-Spec-v1.ipynb`](../spec/DwTA-Spec-v1.ipynb) (v1.0). Implementation notes and deviations:
 [`docs/implementation-notes.md`](docs/implementation-notes.md).
 
 ---

@@ -1,6 +1,6 @@
 # Implementation notes (v1.0)
 
-What the build learned and where it departs from `DwTA-Spec-v1.ipynb`. Each item should be folded back into the spec
+What the build learned and where it departs from `spec/DwTA-Spec-v1.ipynb`. Each item should be folded back into the spec
 as a v1.x revision.
 
 ## Verification items: answers

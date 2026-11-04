@@ -17,5 +17,7 @@ dwta-poc/lab/*
 
 # Internal-only material: kept on the workstation, never published (this repo is public)
 local/
-DwTA-vs-Ransomware-Protection.md
 Hackathon-POC/dwta-wheels/
+
+# Rough / working documents (drafts, notes, demo scripts, side specs): kept locally, never pushed
+rough/
