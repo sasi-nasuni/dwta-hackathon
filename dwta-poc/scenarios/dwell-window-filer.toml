@@ -1,5 +1,6 @@
 # The demo story on a real Nasuni Edge. Same shape as dwell-window.toml, but:
-#  * the Edge's Ransomware Protection detects the Day 7 encryption for real (no raise_incident step);
+#  * the Edge's Ransomware Protection detects the Day 7 encryption for real (no raise_incident step), at the
+#    product-default incident level 3 (Medium);
 #  * a snapshot is taken before the attack: it is the restore point for Targeted Restore.
 # Fallback if Ransomware Protection does not fire:  dwta-sim -i filer step raise_incident --at "D7 02:05" ...
 name        = "dwell-window-filer"
@@ -11,6 +12,7 @@ corpus      = "filer-42"
 at = "D1 08:00"
 actor = "client-admin"
 action = "seed"
+parallel = 8
 
 [[step]]
 at = "D1 09:00"
@@ -64,7 +66,11 @@ actor = "client-attack"
 as = "svc-backup"
 action = "encrypt"
 share = "finance"
-paths = "*"
-rate = 40
+# Product-default RP sensitivity: incident at level 3 (Medium), blocking at level 4 (High). For the indicator this
+# triggers (existing file read + deleted, new *.locked file in the same folder, per user+client per 5 minutes) level 3
+# is 50-64 files and level 4 is 65+. Encrypting exactly 60 files (Q1 + Q2) in one burst lands in level 3: an RP
+# incident, and the attacker account is not blocked.
+paths = "/Q[12]/*"
+rate = 60
 parallel = 8
 suffix = ".locked"

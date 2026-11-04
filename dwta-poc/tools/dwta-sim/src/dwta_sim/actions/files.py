@@ -10,6 +10,7 @@ from .. import artifacts, corpus
 from ..scenario import ScenarioError, Step
 from ..smb import SmbSession as S
 from . import action
+from .ransom import _run_parallel
 
 
 def _require(step: Step, *keys: str) -> None:
@@ -25,8 +26,15 @@ def seed(ctx, step: Step) -> None:
     for share in shares:
         files = ctx.seeded(share)
         folders = sorted({f["path"].rsplit("/", 1)[0] for f in files if f["path"].count("/") > 1})
-        cmds = [S.mkdir(d) for d in folders] + [S.put(ctx.corpus_container_path(share, f["path"]), f["path"]) for f in files]
-        ctx.session(step).run(share, cmds)
+        sess = ctx.session(step)
+        puts = [[S.put(ctx.corpus_container_path(share, f["path"]), f["path"])] for f in files]
+        parallel = max(1, int(step.params.get("parallel", 1)))
+        if parallel > 1:  # high-latency link to a real Edge: folders first, then the uploads over N sessions
+            if folders:
+                sess.run(share, [S.mkdir(d) for d in folders])
+            _run_parallel(sess, share, puts, parallel)
+        else:
+            sess.run(share, [S.mkdir(d) for d in folders] + [c for g in puts for c in g])
         for d in folders:
             ctx.truth(step, op="mkdir", share=share, path=d, expected_event="mkdir")
         for f in files:
