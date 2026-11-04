@@ -27,3 +27,23 @@ make review                 # the pre-restore review list
 ```
 
 All test files are harmless: generated stubs, the EICAR test string, and a fabricated threat feed. No real malware.
+
+## Product integration (Nasuni Edge, NBN daemon, Portal)
+
+The integration of DwTA into the Nasuni product lives in the product repositories, on hackathon branches. They are
+linked here as git submodules under [`Hackathon-POC/`](Hackathon-POC/), pinned to the integration commits. They are
+private `nasuni` repositories, so the submodules are only readable with Nasuni GitHub access.
+
+| Submodule | Branch | What |
+|---|---|---|
+| `Hackathon-POC/edge-api` | `dwta-hackathon` | DwTA commands/events in the Portal ↔ Edge contract |
+| `Hackathon-POC/nbn-daemon` | `dwta-hackathon` | NBN daemon routes forwarding DwTA commands to the Edge |
+| `Hackathon-POC/unity` | `dwta-hackathon` | Edge: audit tap, `dwtad` service, legacy routes, deploy scripts |
+| `Hackathon-POC/portal` | `PORTAL-0000-dwta-hackathon` | Portal backend, event processors and the pre-restore review UI |
+
+```bash
+git submodule update --init   # needs access to github.com/nasuni
+```
+
+The simulator drives a real Edge with `dwta-sim -i filer run dwell-window-filer` (SMB clients run locally in Docker,
+see [`deploy/compose/filer-clients.yml`](dwta-poc/deploy/compose/filer-clients.yml)).

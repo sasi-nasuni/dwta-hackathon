@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import random
 
-from dwta_core.fileio import atomic_write_json, atomic_write_text
 from dwta_core.simclock import parse_at
 from dwta_core.timeutil import iso
 
@@ -43,14 +42,21 @@ def publish_feed(ctx, step: Step) -> None:
     text = ("# DwTA fabricated feed (MalwareBazaar export format)\n# " + ",".join(FEED_COLUMNS) + "\n"
             + "".join(_csv_row(r) + "\n" for r in rows))
     name = f"feed-{ctx.sim_now():%Y%m%d}-{ctx.run_id}-{step.index}.csv"
-    atomic_write_text(ctx.instance.feeds / "inbox" / name, text)
-    ctx.truth(step, op="publish_feed", share=None, path=f"feeds/inbox/{name}", expected_event=None,
+    where = ctx.instance.publish_feed(name, text)
+    ctx.truth(step, op="publish_feed", share=None, path=where, expected_event=None,
               hashes=len(hashes), expected_matches=expected)
 
 
 def _validate_incident(step: Step) -> None:
     if "from_step" not in step.params and not {"user", "client_ip"} <= step.params.keys():
         raise ScenarioError(f"step {step.index}: raise_incident needs from_step, or user + client_ip")
+
+
+@action("snapshot", needs_actor=False)
+def snapshot(ctx, step: Step) -> None:
+    """Take a volume snapshot (the restore point Targeted Restore rolls back to). No-op in the local lab."""
+    result = ctx.instance.snapshot()
+    ctx.truth(step, op="snapshot", share=None, path=None, expected_event=None, result_detail=str(result)[:300])
 
 
 @action("raise_incident", needs_actor=False, validate=_validate_incident)
@@ -75,6 +81,6 @@ def raise_incident(ctx, step: Step) -> None:
         "restore_time_sim_ts": iso(parse_at(restore, ctx.scenario.epoch)) if restore else None,
         "description": p.get("description", "Mass encryption detected (simulated Ransomware Protection alert)"),
     }
-    atomic_write_json(ctx.instance.incidents / "inbox" / f"{incident['incident_id']}.json", incident)
-    ctx.truth(step, op="raise_incident", share=None, path=f"incidents/inbox/{incident['incident_id']}.json",
+    where = ctx.instance.raise_incident(incident)
+    ctx.truth(step, op="raise_incident", share=None, path=where,
               expected_event=None, incident_id=incident["incident_id"])

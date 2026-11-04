@@ -1,0 +1,70 @@
+# The demo story on a real Nasuni Edge. Same shape as dwell-window.toml, but:
+#  * the Edge's Ransomware Protection detects the Day 7 encryption for real (no raise_incident step);
+#  * a snapshot is taken before the attack: it is the restore point for Targeted Restore.
+# Fallback if Ransomware Protection does not fire:  dwta-sim -i filer step raise_incident --at "D7 02:05" ...
+name        = "dwell-window-filer"
+description = "Plant on Day 1, threat intel on Day 5, snapshot, then encrypt on Day 7 so Ransomware Protection fires"
+sim_epoch   = "2026-11-02T00:00:00Z"
+corpus      = "filer-42"
+
+[[step]]
+at = "D1 08:00"
+actor = "client-admin"
+action = "seed"
+
+[[step]]
+at = "D1 09:00"
+actor = "client-jdoe"
+action = "edit"
+share = "finance"
+count = 3
+style = "office"
+
+[[step]]
+id = "plant"
+at = "D1 09:14"
+actor = "client-attack"
+as = "svc-backup"
+action = "plant"
+share = "finance"
+path = "/Q3/Q3-Report.pdf"
+artifact = "benign_pe"
+
+[[step]]
+at = ["D2 10:00", "D3 10:00", "D4 10:00"]
+actor = "client-jdoe"
+action = "edit"
+share = "finance"
+count = 2
+style = "office"
+
+[[step]]
+at = "D5 10:00"
+action = "publish_feed"
+include_artifacts = ["benign_pe"]
+file_name = "Q3-Report.pdf"
+decoys = 200
+
+[[step]]
+at = "D5 11:00"
+actor = "client-asmith"
+action = "edit"
+share = "finance"
+count = 2
+style = "office"
+
+[[step]]
+at = "D6 23:00"
+action = "snapshot"
+
+[[step]]
+id = "attack"
+at = "D7 02:00"
+actor = "client-attack"
+as = "svc-backup"
+action = "encrypt"
+share = "finance"
+paths = "*"
+rate = 40
+parallel = 8
+suffix = ".locked"

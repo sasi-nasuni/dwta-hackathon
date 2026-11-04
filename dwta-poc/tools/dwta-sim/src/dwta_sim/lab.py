@@ -32,6 +32,9 @@ class Instance:
 
     @classmethod
     def get(cls, name: str) -> Instance:
+        if name == "filer":
+            from .filer import FilerInstance
+            return FilerInstance("filer", repo_root() / "lab" / "filer")
         return cls(name, repo_root() / "lab" / name)
 
     # host-side folders (bind-mounted into the containers)
@@ -77,6 +80,34 @@ class Instance:
 
     def container_ip(self, service: str) -> str:
         return self.env()[f"IP_{service.upper().replace('-', '_')}"]
+
+    # ------------------------------------------------------------------ target hooks (lab = local Samba container)
+    smb_host = "samba"
+
+    def append_clock(self, run_id: str, sim_now, wall) -> None:
+        from dwta_core.simclock import append_entry
+        append_entry(self.run / "simclock.jsonl", run_id, sim_now, wall)
+
+    def measure_skew(self):
+        from .context import measure_skew
+        return measure_skew(self)
+
+    def publish_feed(self, name: str, text: str) -> str:
+        from dwta_core.fileio import atomic_write_text
+        atomic_write_text(self.feeds / "inbox" / name, text)
+        return f"feeds/inbox/{name}"
+
+    def raise_incident(self, incident: dict) -> str:
+        from dwta_core.fileio import atomic_write_json
+        atomic_write_json(self.incidents / "inbox" / f"{incident['incident_id']}.json", incident)
+        return f"incidents/inbox/{incident['incident_id']}.json"
+
+    def snapshot(self) -> dict:
+        return {"skipped": "the lab has no snapshots"}
+
+    def safety_check(self) -> None:
+        from .runner import safety_check
+        safety_check(self)
 
 
 # ---------------------------------------------------------------------- init helpers

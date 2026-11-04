@@ -12,7 +12,7 @@ from dwta_core.timeutil import iso, utcnow
 
 from . import keystream
 from .actions import load_all
-from .context import RunContext, measure_skew
+from .context import RunContext
 from .lab import Instance, repo_root
 from .scenario import Scenario, validate
 from .smb import SmbSession as S
@@ -49,11 +49,11 @@ def run(inst: Instance, sc: Scenario, seed: int = 42, log=print, speed: str = "m
     registry = load_all()
     from dwta_core.config import load_config
     validate(sc, load_config("lab").data, registry)
-    safety_check(inst)
+    inst.safety_check()
     run_id = f"r-{utcnow():%Y%m%d-%H%M%S}"
     ctx = RunContext(inst, sc, run_id, seed)
     _ = ctx.manifest  # fail early if the corpus pack is missing
-    ctx.skew = measure_skew(inst)
+    ctx.skew = inst.measure_skew()
     started = time.monotonic()
     log(f"run {run_id}: scenario {sc.name}, {len(sc.steps)} steps, clock skew {ctx.skew.total_seconds():+.3f}s")
     prev_sim = None

@@ -1,0 +1,16 @@
+[submodule "Hackathon-POC/edge-api"]
+	path = Hackathon-POC/edge-api
+	url = https://github.com/nasuni/edge-api.git
+	branch = dwta-hackathon
+[submodule "Hackathon-POC/nbn-daemon"]
+	path = Hackathon-POC/nbn-daemon
+	url = https://github.com/nasuni/nbn-daemon.git
+	branch = dwta-hackathon
+[submodule "Hackathon-POC/unity"]
+	path = Hackathon-POC/unity
+	url = https://github.com/nasuni/unity.git
+	branch = dwta-hackathon
+[submodule "Hackathon-POC/portal"]
+	path = Hackathon-POC/portal
+	url = https://github.com/nasuni/portal.git
+	branch = PORTAL-0000-dwta-hackathon

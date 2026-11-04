@@ -11,7 +11,6 @@ from typing import Any
 
 from dwta_core.config import load_config
 from dwta_core.fileio import append_jsonl
-from dwta_core.simclock import append_entry
 from dwta_core.timeutil import iso, parse_iso, utcnow
 
 from . import corpus
@@ -80,7 +79,7 @@ class RunContext:
     # ------------------------------------------------------------------ clock
     def set_clock(self, sim_time: datetime) -> None:
         wall = utcnow() + self.skew
-        append_entry(self.instance.run / "simclock.jsonl", self.run_id, sim_time, wall)
+        self.instance.append_clock(self.run_id, sim_time, wall)
         self._anchor = (sim_time, wall)
 
     def sim_now(self) -> datetime:

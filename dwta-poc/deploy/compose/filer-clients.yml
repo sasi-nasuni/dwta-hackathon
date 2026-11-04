@@ -1,0 +1,38 @@
+# SMB clients for a real Nasuni Edge (dwta-sim instance "filer"). They reach //<FILER>/<share> through Docker's
+# default network; the Edge sees them all with this Mac's IP. Run through dwta-sim, which writes the secrets.
+x-client: &client
+  build: { context: ../images/smbclient }
+  image: dwta-smbclient:1.0
+  restart: unless-stopped
+  init: true
+
+services:
+  client-admin:
+    <<: *client
+    hostname: ws-admin01
+    volumes:
+      - ${LAB_DIR}/secrets/smb-admin:/run/secrets/smb-admin:ro
+      - ${LAB_DIR}/run/staging:/staging
+      - ${LAB_DIR}/../corpus:/corpus:ro
+  client-jdoe:
+    <<: *client
+    hostname: ws-jdoe01
+    volumes:
+      - ${LAB_DIR}/secrets/smb-jdoe:/run/secrets/smb-jdoe:ro
+      - ${LAB_DIR}/run/staging:/staging
+      - ${LAB_DIR}/../corpus:/corpus:ro
+  client-asmith:
+    <<: *client
+    hostname: ws-asmith01
+    volumes:
+      - ${LAB_DIR}/secrets/smb-asmith:/run/secrets/smb-asmith:ro
+      - ${LAB_DIR}/run/staging:/staging
+      - ${LAB_DIR}/../corpus:/corpus:ro
+  client-attack:
+    <<: *client
+    hostname: srv-bkp01
+    volumes:
+      - ${LAB_DIR}/secrets/smb-svc-backup:/run/secrets/smb-svc-backup:ro
+      - ${LAB_DIR}/secrets/smb-jdoe:/run/secrets/smb-jdoe:ro
+      - ${LAB_DIR}/run/staging:/staging
+      - ${LAB_DIR}/../corpus:/corpus:ro

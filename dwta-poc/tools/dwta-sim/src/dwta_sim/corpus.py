@@ -123,6 +123,11 @@ MAKERS = {"pdf": make_pdf, "docx": make_docx, "xlsx": make_xlsx, "csv": make_csv
           "png": make_png, "exe": make_exe, "elf": make_elf, "zip": make_zip}
 
 PROFILES = {
+    # bigger document share for a real Edge: enough files for Ransomware Protection to see a burst
+    "filer": {
+        "finance": [(f"/Q{q}", kind, n) for q in range(1, 5)
+                    for kind, n in (("pdf", 8), ("docx", 8), ("xlsx", 8), ("csv", 4), ("txt", 2))],
+    },
     "default": {
         "finance": [(f"/Q{q}", kind, n) for q in range(1, 5)
                     for kind, n in (("pdf", 2), ("docx", 2), ("xlsx", 2), ("csv", 2), ("txt", 1), ("png", 1))],

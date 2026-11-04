@@ -14,3 +14,8 @@ dwta-poc/lab/*
 .DS_Store
 .idea/
 .vscode/
+
+# Internal-only material: kept on the workstation, never published (this repo is public)
+local/
+DwTA-vs-Ransomware-Protection.md
+Hackathon-POC/dwta-wheels/

@@ -5,6 +5,7 @@ from __future__ import annotations
 import fnmatch
 import hashlib
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 from .. import keystream
 from ..scenario import Step
@@ -15,12 +16,27 @@ NOTE = (b"DwTA LAB TEST NOTE\r\nThis is a harmless note written by the DwTA atta
         b"No data was harmed. Restore with: dwta-sim restore <run_id>\r\n")
 
 
+def _run_parallel(sess, share: str, groups: list[list[str]], parallel: int) -> None:
+    """Run command groups over up to `parallel` concurrent SMB sessions (each group stays in one session, in order).
+    On a high-latency link to a real Edge a single session is too slow for a realistic encryption burst."""
+    groups = [g for g in groups if g]
+    if parallel <= 1 or len(groups) <= 1:
+        sess.run(share, [c for g in groups for c in g])
+        return
+    shards: list[list[str]] = [[] for _ in range(min(parallel, len(groups)))]
+    for i, g in enumerate(groups):
+        shards[i % len(shards)].extend(g)
+    with ThreadPoolExecutor(len(shards)) as pool:
+        list(pool.map(lambda cmds: sess.run(share, cmds), shards))
+
+
 @action("encrypt", validate=_require_share)
 def encrypt(ctx, step: Step) -> None:
     share = step.params["share"]
     pattern = step.params.get("paths", "*")
     suffix = step.params.get("suffix", ".dwtalocked")
     rate = max(1, int(step.params.get("rate", 20)))
+    parallel = max(1, int(step.params.get("parallel", 1)))
     targets = [f for f in ctx.seeded(share) if fnmatch.fnmatch(f["path"], pattern)]  # seeded files only (SIM-07)
     sess = ctx.session(step)
     folders: set[str] = set()
@@ -28,17 +44,18 @@ def encrypt(ctx, step: Step) -> None:
         t0 = time.monotonic()
         batch = targets[i: i + rate]
         names = {f["path"]: f"enc-{step.index}-{i + j}" for j, f in enumerate(batch)}
-        sess.run(share, [S.get(f["path"], f"{ctx.staging_container}/{names[f['path']]}.in") for f in batch])
-        cmds, recs = [], []
+        _run_parallel(sess, share, [[S.get(f["path"], f"{ctx.staging_container}/{names[f['path']]}.in")]
+                                    for f in batch], parallel)
+        groups, recs = [], []
         for f in batch:
             plain = ctx.staged_bytes(f"{names[f['path']]}.in")
             locked = keystream.transform(plain, ctx.key, f"{share}{f['path']}")
             staged = ctx.stage(f"{names[f['path']]}.out", locked)
             dst = f["path"] + suffix
-            cmds += [S.put(staged, dst), S.delete(f["path"])]
+            groups.append([S.put(staged, dst), S.delete(f["path"])])
             recs.append((f, dst, hashlib.sha256(locked).hexdigest()))
             folders.add(f["path"].rsplit("/", 1)[0] or "/")
-        sess.run(share, cmds)
+        _run_parallel(sess, share, groups, parallel)
         for f, dst, sha in recs:
             ctx.truth(step, op="write", share=share, path=dst, sha256=sha, expected_event="write_close",
                       encrypted_from=f["path"])

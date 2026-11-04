@@ -36,7 +36,7 @@ class SmbSession:
     def run(self, share: str, commands: list[str], check: bool = True) -> str:
         """Runs a batch of smbclient commands in one session. Returns combined output."""
         script = "; ".join(commands)
-        argv = ["docker", "exec", self.container(), "smbclient", f"//samba/{share}",
+        argv = ["docker", "exec", self.container(), "smbclient", f"//{self.instance.smb_host}/{share}",
                 "-A", f"/run/secrets/smb-{self.identity}", "-n", self.netbios, "-m", "SMB3",
                 "--option=client min protocol=SMB2", "-c", script]
         p = subprocess.run(argv, capture_output=True, text=True)
@@ -74,7 +74,7 @@ class SmbSession:
 
     def list_shares(self) -> str:
         """SMBC-05: list the shares visible to this identity."""
-        argv = ["docker", "exec", self.container(), "smbclient", "-L", "//samba", "-A",
+        argv = ["docker", "exec", self.container(), "smbclient", "-L", f"//{self.instance.smb_host}", "-A",
                 f"/run/secrets/smb-{self.identity}", "-n", self.netbios, "-m", "SMB3",
                 "--option=client min protocol=SMB2", "-g"]
         p = subprocess.run(argv, capture_output=True, text=True)
