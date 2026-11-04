@@ -1,0 +1,134 @@
+# Realistic multi-account ransomware dwell-window on a real Nasuni Edge, with each user driving SMB from its own
+# VM so the Edge records a distinct source IP per user (two Linux, two Windows).
+#
+#   admin      (Linux VM)    - IT admin: seeds the share
+#   jdoe       (Linux VM)    - office user, later compromised (the loud one)
+#   asmith     (Windows VM)  - office user, later compromised (quiet)
+#   svc-backup (Windows VM)  - service account, the original foothold (quiet)
+# Accounts, VM addresses and credentials come from lab/filer/.env (git-ignored), not from this file.
+#
+# Day 7 the attacker runs encryption from THREE compromised accounts at once:
+#   * jdoe encrypts Q1+Q2 (60 files) -> Ransomware Protection fires an incident (level 3) and attributes it to jdoe.
+#   * asmith encrypts Q3 (30 files)  -> below RP's 50-file threshold: RP stays silent, only DwTA flags it.
+#   * svc-backup encrypts Q4 (30)    -> below threshold: only DwTA flags it, and ties it to the Day 1 plant.
+# That contrast - RP sees one account, DwTA sees all three plus the dormant plant - is the point of the demo.
+name        = "compromised-accounts-filer"
+description = "Dwell window with three compromised accounts encrypting from their own workstations (distinct IPs)"
+sim_epoch   = "2026-11-02T00:00:00Z"
+corpus      = "filer-42"
+# New realistic file names on every run (same file contents and Q1-Q4 folders), so incidents don't look alike.
+randomize_names = true
+
+# --- Day 1: normal business + the quiet foothold ---------------------------------------------------------------
+[[step]]
+at = "D1 08:00"
+actor = "client-admin"
+action = "seed"
+parallel = 8
+
+[[step]]
+at = "D1 09:00"
+actor = "client-jdoe"
+action = "edit"
+share = "finance"
+count = 3
+style = "office"
+
+[[step]]
+id = "plant"
+at = "D1 09:14"
+actor = "client-attack"
+as = "svc-backup"
+action = "plant"
+share = "finance"
+path = "/Q3/{random}.pdf"   # disguised payload, a new realistic document name each run
+artifact = "benign_pe"
+
+# --- Days 2-5: ordinary edits as cover -------------------------------------------------------------------------
+[[step]]
+at = "D2 10:00"
+actor = "client-jdoe"
+action = "edit"
+share = "finance"
+count = 2
+style = "office"
+
+[[step]]
+at = "D2 14:00"
+actor = "client-asmith"
+action = "edit"
+share = "finance"
+count = 2
+style = "office"
+
+[[step]]
+at = "D3 10:00"
+actor = "client-jdoe"
+action = "edit"
+share = "finance"
+count = 2
+style = "office"
+
+[[step]]
+at = "D4 10:00"
+actor = "client-jdoe"
+action = "edit"
+share = "finance"
+count = 2
+style = "office"
+
+[[step]]
+at = "D4 15:00"
+actor = "client-asmith"
+action = "edit"
+share = "finance"
+count = 2
+style = "office"
+
+# --- Day 5: threat intelligence catches up with the planted payload --------------------------------------------
+[[step]]
+at = "D5 10:00"
+action = "publish_feed"
+include_artifacts = ["benign_pe"]
+file_name_from = "plant"     # the feed lists the payload under the name it was planted with
+decoys = 200
+
+# --- Day 6: snapshot = the Targeted Restore point --------------------------------------------------------------
+[[step]]
+at = "D6 23:00"
+action = "snapshot"
+
+# --- Day 7: the attack, from three compromised accounts, each on its own workstation ---------------------------
+[[step]]
+id = "attack-jdoe"
+at = "D7 02:00"
+actor = "client-jdoe"
+action = "encrypt"
+share = "finance"
+paths = "/Q[12]/*"          # 60 files -> Ransomware Protection level 3 (incident), attributed to jdoe
+rate = 60
+parallel = 8
+suffix = ".locked"
+
+[[step]]
+id = "attack-asmith"
+at = "D7 02:20"
+actor = "client-asmith"
+action = "encrypt"
+share = "finance"
+paths = "/Q3/*"             # 30 files -> below RP threshold: DwTA-only
+rate = 30
+parallel = 1
+suffix = ".locked"
+
+[[step]]
+id = "attack-svc"
+at = "D7 02:40"
+actor = "client-attack"
+as = "svc-backup"
+action = "encrypt"
+share = "finance"
+paths = "/Q4/*"             # 30 files -> below RP threshold: DwTA-only, and tied to the Day 1 plant
+rate = 30
+parallel = 1
+suffix = ".locked"

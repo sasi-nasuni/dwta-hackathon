@@ -126,11 +126,19 @@ class FilerInstance(Instance):
         guid = self.env()["FILER_VOLUME_GUID"]
         return {"forcesnap": self.legacy("volumes.forcesnap", {"guid": guid, "blocking": True})}
 
+    def vm_mode(self) -> bool:
+        return self.env().get("VM_MODE", "").lower() in ("on", "1", "true", "yes")
+
+    def restore_actor(self) -> tuple[str, str]:
+        return ("client-admin", "admin")
+
     def safety_check(self) -> None:
         env = self.env()
         vols = self.legacy("volumes.list")
         if not any(v.get("guid") == env["FILER_VOLUME_GUID"] for v in vols):
             raise RuntimeError(f"volume {env['FILER_VOLUME_GUID']} not found on {env['FILER']}; refusing to run")
+        if self.vm_mode():
+            return  # actors run on their own VMs (per-user source IPs); no local client containers needed
         self.write_secrets()
         running = self.compose("ps", "-q", capture=True).stdout.decode().split()
         if len(running) < len(CLIENTS):

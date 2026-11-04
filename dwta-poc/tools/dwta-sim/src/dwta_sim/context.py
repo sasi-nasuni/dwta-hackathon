@@ -56,7 +56,8 @@ class RunContext:
         self.run_dir.mkdir(parents=True, exist_ok=True)
         self.staging_host = self.instance.staging / self.run_id
         self.staging_host.mkdir(parents=True, exist_ok=True)
-        self.staging_container = f"/staging/{self.run_id}"
+        # Local paths handed to actions are host paths; each transport maps them to its client (SMBC-03/04).
+        self.staging_container = str(self.staging_host)
         self.pack = repo_root() / "lab" / "corpus" / self.scenario.corpus
         self.key = bytes.fromhex(self.env["SIM_KEY"])
 
@@ -71,10 +72,16 @@ class RunContext:
         return self._manifest
 
     def seeded(self, share: str) -> list[dict[str, Any]]:
-        return [f for f in self.manifest["files"] if f["share"] == share]
+        """Corpus files as they appear on the share. ``path`` is the share path, ``src`` the pack path."""
+        if not hasattr(self, "_seeded"):
+            files = [{**f, "src": f["path"]} for f in self.manifest["files"]]
+            if self.scenario.randomize_names:
+                files = corpus.randomize_names(files, random.Random(f"names:{self.run_id}"))
+            self._seeded = files
+        return [f for f in self._seeded if f["share"] == share]
 
     def corpus_container_path(self, share: str, path: str) -> str:
-        return f"/corpus/{self.scenario.corpus}/files/{share}{path}"
+        return str(self.pack / "files" / share.lstrip("/") / path.lstrip("/"))
 
     # ------------------------------------------------------------------ clock
     def set_clock(self, sim_time: datetime) -> None:
@@ -95,11 +102,11 @@ class RunContext:
         return self._sessions[key]
 
     def stage(self, name: str, data: bytes) -> str:
-        """Writes bytes to the shared staging folder; returns the in-container path."""
+        """Writes bytes to the staging folder; returns the host path (the transport maps it to the client)."""
         p = self.staging_host / name
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_bytes(data)
-        return f"{self.staging_container}/{name}"
+        return str(p)
 
     def staged_bytes(self, name: str) -> bytes:
         return (self.staging_host / name).read_bytes()

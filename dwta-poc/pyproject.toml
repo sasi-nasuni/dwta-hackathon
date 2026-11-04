@@ -9,6 +9,7 @@ package = false
 
 [tool.uv.workspace]
 members = ["packages/*", "services/*", "tools/*"]
+exclude = ["tools/demo-runner"]   # standalone stdlib demo service, not a workspace package
 
 [tool.uv.sources]
 dwta-core = { workspace = true }

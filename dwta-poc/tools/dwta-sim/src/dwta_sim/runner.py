@@ -86,13 +86,15 @@ def restore(inst: Instance, run_id: str, log=print) -> int:
     the encrypted copies. Planted files and notes are deliberately left in place: that is the gap DwTA closes."""
     run_dir = inst.run / "runs" / run_id
     meta = json.loads((run_dir / "run.json").read_text())
-    pack = f"/corpus/{meta['corpus']}/files"
+    pack = str(inst.corpus_root / meta["corpus"] / "files")
     by_share: dict[str, list[str]] = {}
     for t in read_jsonl(run_dir / "groundtruth.jsonl"):
         if t.get("encrypted_from"):
             src = t["encrypted_from"]
-            by_share.setdefault(t["volume"], []).extend([S.put(f"{pack}/{t['volume']}{src}", src), S.delete(t["path"])])
-    sess = S(inst, "client-admin", "admin", "WS-ADMIN01")
+            by_share.setdefault(t["volume"], []).extend(
+                [S.put(f"{pack}/{t['volume']}{t.get('corpus_src', src)}", src), S.delete(t["path"])])
+    actor, identity = inst.restore_actor()
+    sess = S(inst, actor, identity, "restore")
     n = 0
     for share, cmds in by_share.items():
         sess.run(share, cmds)

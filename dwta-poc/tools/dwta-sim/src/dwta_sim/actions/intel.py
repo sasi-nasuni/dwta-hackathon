@@ -25,6 +25,10 @@ def publish_feed(ctx, step: Step) -> None:
     """Fabricated feed in MalwareBazaar CSV export format (FEED-01/02), dropped atomically into feeds/inbox."""
     first_seen = ctx.sim_now().strftime("%Y-%m-%d %H:%M:%S")
     rng = random.Random(f"{ctx.seed}:feed:{step.index}")
+    # file_name_from = "<step id>" reuses the name an earlier plant step actually wrote (it may be randomized)
+    src = step.params.get("file_name_from")
+    file_name = (ctx.step_facts[src]["path"].rsplit("/", 1)[-1] if src and src in ctx.step_facts
+                 else step.params.get("file_name"))
     rows, hashes, expected = [], [], []
     for name in step.params.get("include_artifacts", []):
         data = artifacts.get(name)
@@ -32,7 +36,7 @@ def publish_feed(ctx, step: Step) -> None:
         hashes.append(sha)
         expected.append(sha)
         rows.append([first_seen, sha, hashlib.md5(data).hexdigest(), hashlib.sha1(data).hexdigest(), "dwta-lab",
-                     step.params.get("file_name", f"{name}.bin"), "exe", "application/x-dosexec", "DwTA.TestFamily",
+                     file_name or f"{name}.bin", "exe", "application/x-dosexec", "DwTA.TestFamily",
                      "n/a", "n/a", "n/a", "n/a", "n/a"])
     for _ in range(int(step.params.get("decoys", 0))):
         sha = f"{rng.getrandbits(256):064x}"

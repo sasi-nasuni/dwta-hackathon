@@ -55,6 +55,9 @@ class Instance:
     @property
     def secrets(self) -> Path: return self.root / "secrets"
 
+    @property
+    def corpus_root(self) -> Path: return repo_root() / "lab" / "corpus"
+
     def env(self) -> dict[str, str]:
         if not self.env_file.exists():
             raise FileNotFoundError(f"{self.env_file} missing; run `dwta-lab init --instance {self.name}`")
@@ -83,6 +86,10 @@ class Instance:
 
     # ------------------------------------------------------------------ target hooks (lab = local Samba container)
     smb_host = "samba"
+
+    def restore_actor(self) -> tuple[str, str]:
+        """Actor+identity the Targeted Restore stand-in uses to put files back."""
+        return ("client-admin", "admin")
 
     def append_clock(self, run_id: str, sim_now, wall) -> None:
         from dwta_core.simclock import append_entry

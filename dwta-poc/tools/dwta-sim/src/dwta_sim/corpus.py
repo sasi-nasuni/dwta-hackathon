@@ -144,6 +144,63 @@ def make_file(kind: str, rng: random.Random) -> bytes:
     return MAKERS[kind](rng)
 
 
+# ---------------------------------------------------------------------------- per-run realistic file names
+# Used when a scenario sets ``randomize_names = true``: same bytes and folders, different names each run, so
+# repeated demo incidents don't all show the same files. Only [A-Za-z0-9_-] so every SMB transport handles them.
+STEMS = {
+    "pdf": ["Statement", "Invoice", "Contract", "Audit_Report", "Bank_Reconciliation", "Tax_Filing",
+            "Vendor_Agreement", "Expense_Report", "Purchase_Order", "Credit_Memo", "Remittance_Advice"],
+    "docx": ["Board_Minutes", "Policy", "Proposal", "Memo", "Business_Plan", "Review_Notes", "Offer_Letter",
+             "SOW", "Strategy", "Engagement_Letter", "Process_Guide"],
+    "xlsx": ["Budget", "Forecast", "Payroll", "Headcount", "Cashflow", "PnL", "Sales_Pipeline", "Capex_Tracker",
+             "Commissions", "Accruals", "Variance_Analysis"],
+    "csv": ["Ledger_Export", "Invoices", "Transactions", "AP_Aging", "AR_Aging", "GL_Extract", "Bank_Feed"],
+    "txt": ["Notes", "Call_Notes", "Todo", "Meeting_Notes", "Handover"],
+    "png": ["Chart", "Dashboard", "Org_Chart"],
+    "exe": ["setup", "agent", "updater", "installer"],
+    "elf": ["tool", "sync", "backup"],
+    "zip": ["bundle", "docs", "archive"],
+}
+VENDORS = ["Acme", "Globex", "Initech", "Umbrella", "Contoso", "Northwind", "Fabrikam", "Wayne", "Stark", "Tyrell"]
+DEPTS = ["Finance", "HR", "Sales", "Ops", "Legal", "IT", "Marketing", "Treasury"]
+REGIONS = ["EMEA", "APAC", "AMER", "NA", "UK", "DE", "IN"]
+MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+VERSIONS = ["v2", "v3", "final", "FINAL_v2", "draft", "signed", "approved", "rev1"]
+
+
+def random_stem(kind: str, rng: random.Random) -> str:
+    """A realistic file stem (no extension) for a file of ``kind``."""
+    stem = rng.choice(STEMS.get(kind, ["File"]))
+    year, mm, dd = rng.choice([2025, 2026]), rng.randint(1, 12), rng.randint(1, 28)
+    patterns = [
+        lambda: f"{stem}_{MONTHS[mm - 1]}{year}",
+        lambda: f"{rng.choice(DEPTS)}_{stem}_{year}-{mm:02d}",
+        lambda: f"{rng.choice(VENDORS)}-{stem}-{rng.choice(VERSIONS)}",
+        lambda: f"{stem}_{rng.choice(REGIONS)}_Q{(mm - 1) // 3 + 1}_FY{year % 100}",
+        lambda: f"{year}{mm:02d}{dd:02d}_{stem}_{rng.choice(REGIONS)}",
+        lambda: f"{stem}-{rng.choice(VENDORS)}-{year}{mm:02d}{dd:02d}",
+    ]
+    return rng.choice(patterns)()
+
+
+def randomize_names(files: list[dict], rng: random.Random) -> list[dict]:
+    """Copies of manifest entries with a new ``path`` (same folder and extension) and ``src`` = the pack path."""
+    taken: set[str] = set()
+    out = []
+    for f in files:
+        folder, name = f["path"].rsplit("/", 1)
+        ext = name.rsplit(".", 1)[1] if "." in name else ""
+        for _ in range(50):
+            new = f"{folder}/{random_stem(f['kind'], rng)}" + (f".{ext}" if ext else "")
+            if new.lower() not in taken:
+                break
+        else:  # vanishingly unlikely; keep it unique anyway
+            new = f"{folder}/{random_stem(f['kind'], rng)}_{len(out)}" + (f".{ext}" if ext else "")
+        taken.add(new.lower())
+        out.append({**f, "path": new, "src": f["path"]})
+    return out
+
+
 def build(out_root: Path, profile: str = "default", seed: int = 42) -> Path:
     pack_id = f"{profile}-{seed}"
     pack = out_root / pack_id

@@ -27,7 +27,7 @@ def seed(ctx, step: Step) -> None:
         files = ctx.seeded(share)
         folders = sorted({f["path"].rsplit("/", 1)[0] for f in files if f["path"].count("/") > 1})
         sess = ctx.session(step)
-        puts = [[S.put(ctx.corpus_container_path(share, f["path"]), f["path"])] for f in files]
+        puts = [[S.put(ctx.corpus_container_path(share, f["src"]), f["path"])] for f in files]
         parallel = max(1, int(step.params.get("parallel", 1)))
         if parallel > 1:  # high-latency link to a real Edge: folders first, then the uploads over N sessions
             if folders:
@@ -93,8 +93,18 @@ def write(ctx, step: Step) -> None:
 
 @action("plant", validate=lambda s: _require(s, "share", "path", "artifact"))
 def plant(ctx, step: Step) -> None:
-    """Approved safe artifact under a (possibly disguised) name."""
+    """Approved safe artifact under a (possibly disguised) name. ``{random}`` in ``path`` becomes a realistic
+    document-style stem picked per run (e.g. "/Q3/{random}.pdf" -> "/Q3/Contoso-Invoice-v2.pdf")."""
     share, path, art = step.params["share"], step.params["path"], step.params["artifact"]
+    if "{random}" in path:
+        rng = random.Random(f"plant:{ctx.run_id}:{step.index}")
+        ext = path.rsplit(".", 1)[1] if "." in path.rsplit("/", 1)[-1] else "pdf"
+        existing = {f["path"].lower() for f in ctx.seeded(share)}
+        while True:
+            candidate = path.replace("{random}", corpus.random_stem(ext, rng))
+            if candidate.lower() not in existing:
+                path = candidate
+                break
     data = artifacts.get(art)
     staged = ctx.stage(f"plant-{step.index}", data)
     folder = path.rsplit("/", 1)[0]

@@ -1,90 +1,67 @@
-"""Runs smbclient inside an actor's client container (SMBC-03/04). All SMB traffic originates there."""
+"""SMB operations an actor performs, as transport-agnostic ``Op`` records.
+
+The action code builds a list of ``Op`` (put/get/rename/delete/mkdir) with ``SmbSession`` and calls ``run``;
+the actor's transport (docker container, Linux VM or Windows VM - see ``transport.py``) renders and executes them.
+All traffic originates from the actor's own client so the Edge records a distinct source IP per user (SMBC-03/04).
+"""
 
 from __future__ import annotations
 
-import subprocess
 import time
 from dataclasses import dataclass
-
-from .lab import Instance
 
 
 class SmbError(RuntimeError):
     pass
 
 
-def _quote(path: str) -> str:
-    return '"' + path.replace('"', "") + '"'
+@dataclass(frozen=True)
+class Op:
+    kind: str            # mkdir | put | get | rename | delete
+    a: str = ""          # remote (share-relative) path; for rename, the source
+    b: str = ""          # local file for put/get; for rename, the destination (share-relative)
+    replace: bool = False
 
 
-@dataclass
+def rel(path: str) -> str:
+    """Share-relative form smbclient/PowerShell expect (no leading slash)."""
+    return path.lstrip("/")
+
+
 class SmbSession:
-    instance: Instance
-    actor: str            # client container service name, e.g. "client-attack"
-    identity: str         # credentials to log in with (may differ from the actor's own: U8)
-    netbios: str          # always the actor machine's name
-    _container: str | None = None
+    """One actor+identity session. Ops are built with the static helpers and run through the actor's transport."""
 
-    def container(self) -> str:
-        if self._container is None:
-            out = self.instance.compose("ps", "-q", self.actor, capture=True).stdout.decode().strip()
-            if not out:
-                raise SmbError(f"{self.actor} is not running; start the lab with `dwta-lab up`")
-            self._container = out.splitlines()[0]
-        return self._container
+    def __init__(self, instance, actor: str, identity: str, netbios: str):
+        self.instance = instance
+        self.actor = actor
+        self.identity = identity
+        self.netbios = netbios
+        from .transport import make_transport
+        self._transport = make_transport(instance, actor, identity, netbios)
 
-    def run(self, share: str, commands: list[str], check: bool = True) -> str:
-        """Runs a batch of smbclient commands in one session. Returns combined output."""
-        script = "; ".join(commands)
-        argv = ["docker", "exec", self.container(), "smbclient", f"//{self.instance.smb_host}/{share}",
-                "-A", f"/run/secrets/smb-{self.identity}", "-n", self.netbios, "-m", "SMB3",
-                "--option=client min protocol=SMB2", "-c", script]
-        p = subprocess.run(argv, capture_output=True, text=True)
-        out = p.stdout + p.stderr
-        failed = [ln for ln in out.splitlines() if "NT_STATUS_" in ln and "NT_STATUS_OBJECT_NAME_COLLISION" not in ln]
-        if check and (p.returncode != 0 or failed):
-            raise SmbError(f"smbclient failed ({self.actor} as {self.identity} on {share}): {failed or out.strip()[:400]}")
-        return out
+    def run(self, share: str, ops: list[Op], check: bool = True) -> str:
+        return self._transport.run(share, list(ops), check=check)
 
-    # convenience wrappers (paths are share-relative, e.g. "/Q3/Q3-Report.pdf"; local paths are in the container)
+    # Op constructors (paths are share-relative, e.g. "/Q3/Q3-Report.pdf"; local paths are host staging/corpus files)
     @staticmethod
-    def put(local: str, remote: str) -> str:
-        return f"put {_quote(local)} {_quote(remote.lstrip('/'))}"
+    def put(local: str, remote: str) -> Op:
+        return Op("put", remote, local)
 
     @staticmethod
-    def get(remote: str, local: str) -> str:
-        return f"get {_quote(remote.lstrip('/'))} {_quote(local)}"
+    def get(remote: str, local: str) -> Op:
+        return Op("get", remote, local)
 
     @staticmethod
-    def rename(src: str, dst: str, replace: bool = False) -> str:
-        return f"rename {_quote(src.lstrip('/'))} {_quote(dst.lstrip('/'))}" + (" -f" if replace else "")
+    def rename(src: str, dst: str, replace: bool = False) -> Op:
+        return Op("rename", src, dst, replace)
 
     @staticmethod
-    def delete(remote: str) -> str:
-        return f"del {_quote(remote.lstrip('/'))}"
+    def delete(remote: str) -> Op:
+        return Op("delete", remote)
 
     @staticmethod
-    def mkdir(remote: str) -> str:
-        return f"mkdir {_quote(remote.lstrip('/'))}"
-
-    @staticmethod
-    def copy_dir(local_dir: str, remote_dir: str) -> list[str]:
-        """Recursive upload of a container-local directory (SMBC-05: mput with recurse)."""
-        return ["recurse ON", "prompt OFF", f"lcd {_quote(local_dir)}", cd(remote_dir), "mput *"]
-
-    def list_shares(self) -> str:
-        """SMBC-05: list the shares visible to this identity."""
-        argv = ["docker", "exec", self.container(), "smbclient", "-L", f"//{self.instance.smb_host}", "-A",
-                f"/run/secrets/smb-{self.identity}", "-n", self.netbios, "-m", "SMB3",
-                "--option=client min protocol=SMB2", "-g"]
-        p = subprocess.run(argv, capture_output=True, text=True)
-        if p.returncode != 0:
-            raise SmbError(p.stdout + p.stderr)
-        return p.stdout
-
-
-def cd(remote_dir: str) -> str:
-    return f"cd {_quote(remote_dir.lstrip('/') or '/')}"
+    def mkdir(remote: str) -> Op:
+        return Op("mkdir", remote)
 
 
 def wait_settle(seconds: float = 0.3) -> None:

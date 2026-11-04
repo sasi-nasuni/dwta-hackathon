@@ -21,3 +21,6 @@ Hackathon-POC/dwta-wheels/
 
 # Rough / working documents (drafts, notes, demo scripts, side specs): kept locally, never pushed
 rough/
+
+# demo-runner runtime output
+dwta-poc/tools/demo-runner/last-run.log

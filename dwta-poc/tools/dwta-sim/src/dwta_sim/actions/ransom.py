@@ -58,7 +58,7 @@ def encrypt(ctx, step: Step) -> None:
         _run_parallel(sess, share, groups, parallel)
         for f, dst, sha in recs:
             ctx.truth(step, op="write", share=share, path=dst, sha256=sha, expected_event="write_close",
-                      encrypted_from=f["path"])
+                      encrypted_from=f["path"], corpus_src=f.get("src", f["path"]))
             ctx.truth(step, op="delete", share=share, path=f["path"], expected_event="delete")
         elapsed = time.monotonic() - t0
         if i + rate < len(targets) and elapsed < 1.0:

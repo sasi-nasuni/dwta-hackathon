@@ -36,6 +36,7 @@ class Scenario:
     corpus: str
     steps: list[Step]
     path: Path | None = None
+    randomize_names: bool = False  # new realistic file names for the corpus on every run (same bytes and folders)
 
 
 class ScenarioError(ValueError):
@@ -63,7 +64,7 @@ def from_dict(data: dict[str, Any], default_epoch: str = "2026-11-02T00:00:00Z",
             steps.append(Step(len(steps) + 1, at, sim_time, raw.get("action", ""), raw.get("actor"), raw.get("as"),
                               raw.get("id"), params))
     return Scenario(data.get("name", path.stem if path else "adhoc"), data.get("description", ""), epoch,
-                    data.get("corpus", "default-42"), steps, path)
+                    data.get("corpus", "default-42"), steps, path, bool(data.get("randomize_names", False)))
 
 
 def validate(sc: Scenario, lab: dict[str, Any], registry: dict[str, Any]) -> None:
